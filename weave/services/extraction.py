@@ -673,7 +673,7 @@ def is_functional(predicate: str) -> bool:
 
 def get_extractor(settings: Settings | None = None):
     settings = settings or get_settings()
-    if settings.has_llm:
+    if settings.has_llm and settings.llm_extraction.lower() not in ("off", "0", "false", "no"):
         return LLMExtractor(settings)
     return RuleBasedExtractor()
 

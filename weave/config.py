@@ -97,6 +97,15 @@ class Settings:
     # --- extraction / generation -----------------------------------------
     # "auto" uses the LLM when a key is present and falls back to the
     # deterministic rule-based extractor otherwise.
+    # Extraction and answering are both LLM-capable but priced very
+    # differently: extraction runs once per ingested turn, answering once per
+    # query. On a 500-question benchmark with ~50 sessions each that is ~25,000
+    # extraction calls against ~500 answer calls, so they get separate
+    # switches. "auto" follows the API key; "off" forces the rule-based path.
+    llm_extraction: str = field(
+        default_factory=lambda: _env("WEAVE_LLM_EXTRACTION", "auto")
+    )
+
     llm_provider: str = field(default_factory=lambda: _env("WEAVE_LLM_PROVIDER", "auto"))
     anthropic_api_key: str = field(
         default_factory=lambda: _env("ANTHROPIC_API_KEY", "")
