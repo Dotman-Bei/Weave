@@ -526,6 +526,12 @@ if WEB_DIR.exists():
 
     @app.get("/", include_in_schema=False)
     def index() -> FileResponse:
+        """The landing page: what Weave is, no live data required."""
         return FileResponse(WEB_DIR / "index.html")
+
+    @app.get("/workspace", include_in_schema=False)
+    def workspace() -> FileResponse:
+        """The app itself -- everything that needs a populated graph."""
+        return FileResponse(WEB_DIR / "workspace.html")
 
     app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")

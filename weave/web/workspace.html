@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Weave workspace — query pipeline</title>
+<meta name="description" content="Graph-native agent memory: an immutable episodic record, semantic facts that supersede rather than overwrite, and a procedural layer that learns how to retrieve them." />
+<link rel="stylesheet" href="/static/globals.css" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23f3effa'/%3E%3Cpath d='M6 11h20M6 21h20' stroke='%231c1726' stroke-width='2.5' stroke-linecap='round'/%3E%3Cpath d='M12 5v22M20 5v22' stroke='%237c6cf5' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E" />
+</head>
+<body>
+
+<!-- Film grain: barely perceptible, but removing it makes everything flatter. -->
+<div class="grain" aria-hidden="true">
+  <svg width="100%" height="100%">
+    <filter id="weave-grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" />
+      <feColorMatrix type="saturate" values="0" />
+    </filter>
+    <rect width="100%" height="100%" filter="url(#weave-grain)" />
+  </svg>
+</div>
+
+<!-- ============================== NAV ============================== -->
+<div class="nav-wrap">
+  <nav class="nav" aria-label="Primary">
+    <a class="nav-brand" href="/" aria-label="Weave home">WEAVE</a>
+    <div class="nav-links">
+      <a class="nav-link" href="/">&larr; Overview</a>
+      <a class="nav-link" href="#workspace">Pipeline</a>
+      <a class="nav-link" href="#timeline">Timeline</a>
+      <a class="nav-link" href="#graph">Graph</a>
+      <a class="nav-link" href="#routing">Routing</a>
+    </div>
+    <div class="nav-badges">
+      <span class="tag tag-quiet" id="badge-backend">BACKEND &hellip;</span>
+      <span class="tag tag-quiet" id="badge-extraction">EXTRACTION &hellip;</span>
+    </div>
+  </nav>
+</div>
+
+<main id="top">
+
+<!-- App toolbar: controls only. This page is the tool, not a description of it. -->
+<div class="shell" style="padding-top:118px;padding-bottom:6px">
+  <div class="spread" style="align-items:center;gap:14px;flex-wrap:wrap">
+    <div class="row" style="gap:10px;align-items:baseline">
+      <span class="label">Memory</span>
+      <span class="data" id="toolbar-state">&mdash;</span>
+    </div>
+    <div class="row" style="gap:10px">
+      <button class="btn btn-primary" id="btn-seed">Load demo memory</button>
+      <button class="btn btn-ghost" id="btn-reset">Reset</button>
+    </div>
+  </div>
+</div>
+
+<section class="section" id="workspace" style="padding-top:18px">
+  <div class="shell">
+
+    <div class="workspace-grid stack-lg">
+      <!-- Console -->
+      <div class="surface" data-reveal>
+        <div class="surface-head">
+          <span class="dot dot-quiet" aria-hidden="true"></span>
+          <span class="surface-title">Ask</span>
+          <span class="label" id="console-state" style="margin-left:auto">READY</span>
+        </div>
+        <div class="surface-body">
+          <form class="stack-lg" id="query-form">
+            <div class="field">
+              <label class="label" for="q">Question</label>
+              <input class="text-input" id="q" autocomplete="off"
+                     placeholder="What language do I prefer for pipelines?" />
+            </div>
+
+            <div class="console-row">
+              <div class="field">
+                <label class="label" for="path">Retrieval path</label>
+                <select class="select-input" id="path">
+                  <option value="">learned routing</option>
+                  <option value="semantic-only">semantic-only</option>
+                  <option value="episodic-depth-3">episodic-depth-3</option>
+                  <option value="hybrid-conflict">hybrid-conflict</option>
+                  <option value="episodic-depth-2">episodic-depth-2</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="label" for="budget">Context budget</label>
+                <select class="select-input" id="budget">
+                  <option value="4000">4000 tokens</option>
+                  <option value="2000">2000 tokens</option>
+                  <option value="1000">1000 tokens</option>
+                  <option value="400">400 tokens</option>
+                </select>
+              </div>
+            </div>
+
+            <button class="btn btn-primary" type="submit" id="btn-ask" style="width:100%">Run query</button>
+          </form>
+
+          <div class="stack" style="margin-top:24px;gap:10px">
+            <span class="label">Try</span>
+            <div class="row" id="suggestions" style="gap:9px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Verdict -->
+      <div class="surface" data-reveal>
+        <div class="surface-head">
+          <span class="dot dot-signal" aria-hidden="true"></span>
+          <span class="surface-title">Verdict</span>
+          <span class="label" id="verdict-state" style="margin-left:auto">NO QUERY RUN</span>
+        </div>
+        <div class="surface-body stack-lg">
+          <div class="verdict verdict-idle" id="verdict">
+            <span class="label" id="verdict-label" style="color:var(--color-void)">AWAITING QUERY</span>
+            <p class="verdict-answer" id="verdict-answer">Run a query to see the coverage decision.</p>
+            <div class="verdict-foot">
+              <span class="label">Confidence</span>
+              <span class="mono" id="verdict-confidence" style="font-size:15px;font-weight:500">—</span>
+              <span class="label" style="margin-left:auto" id="verdict-generator"></span>
+            </div>
+          </div>
+
+          <div id="verdict-detail"></div>
+
+          <div class="row" id="feedback-block" hidden style="gap:10px">
+            <span class="label" style="width:100%">Was this correct?</span>
+            <button class="chip" id="btn-good">Correct</button>
+            <button class="chip" id="btn-bad">Incorrect</button>
+            <span class="label" id="feedback-note">Trains the router</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Evidence -->
+    <div class="surface" data-reveal style="margin-top:28px">
+      <div class="surface-head">
+        <span class="dot dot-coral" aria-hidden="true"></span>
+        <span class="surface-title">Retrieved subgraph</span>
+        <span class="label" id="evidence-state" style="margin-left:auto">NO EVIDENCE</span>
+      </div>
+      <div class="surface-body">
+        <div class="evidence-list" id="evidence">
+          <div class="empty">Run a query to inspect what it traversed.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="timeline">
+  <div class="shell">
+    <div class="spread section-head" style="max-width:none">
+      <span class="label"></span>
+      <div class="row" data-reveal>
+        <select class="select-input" id="policy" style="width:auto">
+          <option value="recency">policy · recency</option>
+          <option value="frequency">policy · frequency</option>
+          <option value="confidence">policy · confidence</option>
+          <option value="trust">policy · trust</option>
+        </select>
+        <button class="btn btn-sm" id="btn-consolidate">Consolidate</button>
+      </div>
+    </div>
+
+    <div class="surface" data-reveal>
+      <div class="surface-head">
+        <span class="dot dot-coral" aria-hidden="true"></span>
+        <span class="surface-title">Facts</span>
+        <span class="label" id="timeline-state" style="margin-left:auto">—</span>
+      </div>
+      <div class="surface-body">
+        <div class="timeline" id="timeline-body">
+          <div class="empty">Load the demo memory to populate the semantic layer.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stack-lg" style="margin-top:28px">
+      <div class="spread">
+        <span class="eyebrow">Conflict ledger</span>
+        <span class="label" id="conflict-count">—</span>
+      </div>
+      <div class="stack" id="conflicts"></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="graph">
+  <div class="shell">
+    <div class="spread section-head" style="max-width:none">
+      <span class="label"></span>
+      <div class="row" data-reveal>
+        <select class="select-input" id="graph-layer" style="width:auto">
+          <option value="">all layers</option>
+          <option value="episodic">episodic</option>
+          <option value="semantic">semantic</option>
+          <option value="procedural">procedural</option>
+        </select>
+        <button class="btn btn-sm" id="btn-graph">Refresh</button>
+      </div>
+    </div>
+
+    <div class="graph-frame" data-reveal>
+      <div id="graph-canvas"><div style="padding:26px"><div class="empty">Load the demo memory to render the graph.</div></div></div>
+      <div class="graph-legend">
+        <span class="row" style="gap:8px"><span class="dot dot-lav"></span><span class="label">Episodic</span></span>
+        <span class="row" style="gap:8px"><span class="dot dot-coral"></span><span class="label">Semantic</span></span>
+        <span class="row" style="gap:8px"><span class="dot dot-mint"></span><span class="label">Procedural</span></span>
+        <span class="label" id="graph-count" style="margin-left:auto">—</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="routing">
+  <div class="shell">
+
+    <div class="surface" data-reveal>
+      <div class="surface-head">
+        <span class="dot dot-mint" aria-hidden="true"></span>
+        <span class="surface-title">Routing table</span>
+        <span class="label" id="routing-state" style="margin-left:auto">—</span>
+      </div>
+      <div class="surface-body">
+        <div class="table-wrap" id="routing-body">
+          <div class="empty">Mark answers correct or incorrect to train the router.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<div class="toast" id="toast" hidden></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

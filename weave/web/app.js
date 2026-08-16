@@ -220,21 +220,34 @@
       const backend = String(config.backend || "unknown").toUpperCase();
 
       // Honesty rule: the embedded engine is never dressed up as HydraDB.
-      const backendBadge = $("badge-backend");
-      backendBadge.textContent = `BACKEND ${backend}`;
-      backendBadge.className = `tag ${backend === "HYDRA" ? "tag-signal" : "tag-quiet"}`;
+      // Each write is guarded independently: the badges live on the
+      // workspace, the footer summary on the landing page. An early return
+      // for one would silently skip the other.
+      const backendBadge = document.getElementById("badge-backend");
+      if (backendBadge) {
+        backendBadge.textContent = `BACKEND ${backend}`;
+        backendBadge.className = `tag ${backend === "HYDRA" ? "tag-signal" : "tag-quiet"}`;
+      }
 
-      const extractionBadge = $("badge-extraction");
-      extractionBadge.textContent = health.llm_configured
-        ? "EXTRACTION LLM"
-        : "EXTRACTION RULE-BASED";
-      extractionBadge.className = `tag ${health.llm_configured ? "tag-signal" : "tag-quiet"}`;
+      const extractionBadge = document.getElementById("badge-extraction");
+      if (extractionBadge) {
+        extractionBadge.textContent = health.llm_configured
+          ? "EXTRACTION LLM"
+          : "EXTRACTION RULE-BASED";
+        extractionBadge.className = `tag ${health.llm_configured ? "tag-signal" : "tag-quiet"}`;
+      }
 
-      $("footer-config").textContent =
-        `${backend} · ${config.llm} · abstention ≥ ${config.abstention_threshold} · ` +
-        `context ≤ ${num(config.max_context_tokens)}`;
+      // The footer summary only exists on the landing page; the badges only
+      // on the workspace. Neither page has both, so writes are optional.
+      const footer = document.getElementById("footer-config");
+      if (footer) {
+        footer.textContent =
+          `${backend} · ${config.llm} · abstention ≥ ${config.abstention_threshold} · ` +
+          `context ≤ ${num(config.max_context_tokens)}`;
+      }
     } catch (_) {
-      $("badge-backend").textContent = "BACKEND OFFLINE";
+      const badge = document.getElementById("badge-backend");
+      if (badge) badge.textContent = "BACKEND OFFLINE";
     }
   }
 
@@ -242,14 +255,29 @@
     const stats = await api("/stats");
     const sessions = stats.by_label?.Session || 0;
 
-    $("m-nodes").textContent = num(stats.nodes);
-    $("m-edges").textContent = num(stats.edges);
-    $("m-sessions").textContent = num(sessions);
-    $("m-current").textContent = num(stats.current_facts);
-    $("m-superseded").textContent = num(stats.superseded_facts);
-    $("m-conflicts").textContent = num(stats.open_conflicts);
+    // The hero counters are landing-only; the toolbar below is workspace-only.
+    const put = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = num(value);
+    };
+    put("m-nodes", stats.nodes);
+    put("m-edges", stats.edges);
+    put("m-sessions", sessions);
+    put("m-current", stats.current_facts);
+    put("m-superseded", stats.superseded_facts);
+    put("m-conflicts", stats.open_conflicts);
 
-    const badge = $("badge-source");
+    // Compact memory summary in the workspace toolbar.
+    const toolbar = document.getElementById("toolbar-state");
+    if (toolbar) {
+      toolbar.textContent = sessions
+        ? `${num(sessions)} sessions · ${num(stats.nodes)} nodes · ` +
+          `${num(stats.current_facts)} current · ${num(stats.superseded_facts)} superseded`
+        : "empty — load the demo to begin";
+    }
+
+    const badge = document.getElementById("badge-source");
+    if (!badge) return;
     if (sessions > 0) {
       badge.className = "tag tag-signal";
       badge.textContent = `${sessions} SESSIONS`;
@@ -694,18 +722,26 @@
   }
 
   function bind() {
-    $("query-form").addEventListener("submit", (event) => {
+    // Null-safe: the landing page and the workspace share this script, and
+    // neither has the other's controls. A missing element is expected, not a
+    // bug -- binding it must not abort the rest of boot.
+    const on = (id, event, handler) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener(event, handler);
+    };
+
+    on("query-form", "submit", (event) => {
       event.preventDefault();
       runQuery();
     });
-    $("btn-good").addEventListener("click", () => sendFeedback(true));
-    $("btn-bad").addEventListener("click", () => sendFeedback(false));
-    $("btn-seed").addEventListener("click", (e) => seedDemo(e.currentTarget));
-    $("btn-seed-2").addEventListener("click", (e) => seedDemo(e.currentTarget));
-    $("btn-graph").addEventListener("click", refreshGraph);
-    $("graph-layer").addEventListener("change", refreshGraph);
+    on("btn-good", "click", () => sendFeedback(true));
+    on("btn-bad", "click", () => sendFeedback(false));
+    on("btn-seed", "click", (e) => seedDemo(e.currentTarget));
+    on("btn-seed-2", "click", (e) => seedDemo(e.currentTarget));
+    on("btn-graph", "click", refreshGraph);
+    on("graph-layer", "change", refreshGraph);
 
-    $("btn-consolidate").addEventListener("click", async (event) => {
+    on("btn-consolidate", "click", async (event) => {
       const button = event.currentTarget;
       button.disabled = true;
       try {
@@ -725,7 +761,7 @@
       }
     });
 
-    $("btn-reset").addEventListener("click", async (event) => {
+    on("btn-reset", "click", async (event) => {
       const button = event.currentTarget;
       button.disabled = true;
       try {
@@ -743,12 +779,32 @@
   }
 
   async function boot() {
-    renderSuggestions();
-    bind();
+    // One script serves both pages. The landing page is pure explanation and
+    // has none of the workspace controls, so the data half is skipped there
+    // rather than guarded element by element -- the query box is the marker.
+    const isWorkspace = document.getElementById("q") !== null;
+
     initParticles();
     initReveals();
     heroStagger();
     initThesis();
+
+    if (!isWorkspace) {
+      // The landing hero still shows real counts -- it is a read-only view of
+      // the running system, which is the point of calling it "Live graph".
+      if (document.getElementById("m-nodes")) {
+        try {
+          await refreshHealth();
+          await refreshStats();
+        } catch (error) {
+          /* a landing page that cannot reach the API still reads fine */
+        }
+      }
+      return;
+    }
+
+    renderSuggestions();
+    bind();
     await refreshHealth();
     try {
       await refreshAll();
