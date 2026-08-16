@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Weave — every session, nothing overwritten</title>
+<meta name="description" content="Graph-native agent memory: an immutable episodic record, semantic facts that supersede rather than overwrite, and a procedural layer that learns how to retrieve them." />
+<link rel="stylesheet" href="/static/globals.css" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23f3effa'/%3E%3Cpath d='M6 11h20M6 21h20' stroke='%231c1726' stroke-width='2.5' stroke-linecap='round'/%3E%3Cpath d='M12 5v22M20 5v22' stroke='%237c6cf5' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E" />
+</head>
+<body>
+
+<!-- Film grain: barely perceptible, but removing it makes everything flatter. -->
+<div class="grain" aria-hidden="true">
+  <svg width="100%" height="100%">
+    <filter id="weave-grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" />
+      <feColorMatrix type="saturate" values="0" />
+    </filter>
+    <rect width="100%" height="100%" filter="url(#weave-grain)" />
+  </svg>
+</div>
+
+<!-- ============================== NAV ============================== -->
+<div class="nav-wrap">
+  <nav class="nav" aria-label="Primary">
+    <a class="nav-brand" href="#top" aria-label="Weave home">WEAVE</a>
+    <div class="nav-links">
+      <a class="nav-link" href="#layers">Layers</a>
+      <a class="nav-link" href="#workspace">Workspace</a>
+      <a class="nav-link" href="#timeline">Timeline</a>
+      <a class="nav-link" href="#graph">Graph</a>
+      <a class="nav-link" href="#routing">Routing</a>
+    </div>
+    <div class="nav-badges">
+      <span class="tag tag-quiet" id="badge-backend">BACKEND …</span>
+      <span class="tag tag-quiet" id="badge-extraction">EXTRACTION …</span>
+    </div>
+  </nav>
+</div>
+
+<main id="top">
+
+<!-- ============================== HERO ============================== -->
+<section class="hero">
+  <canvas class="hero-canvas" id="particles" aria-hidden="true"></canvas>
+
+  <span class="float-chip chip-lav"   style="top:13%;left:2%;animation-duration:2.6s"     aria-hidden="true">sess-01</span>
+  <span class="float-chip chip-coral" style="bottom:9%;left:4%;animation-duration:3.1s"   aria-hidden="true">prefers_language</span>
+  <span class="float-chip chip-mint"  style="top:16%;right:3%;animation-duration:2.9s"    aria-hidden="true">episodic-depth-3</span>
+  <span class="float-chip chip-coral" style="bottom:13%;right:5%;animation-duration:3.3s" aria-hidden="true">SUPERSEDES</span>
+
+  <div class="shell hero-inner">
+    <div class="hero-copy">
+      <span class="eyebrow" data-reveal>Track 3 &middot; Memory &amp; Context Retrieval</span>
+      <h1 class="wordmark" data-reveal>WEAVE</h1>
+      <p class="lead" data-reveal>
+        Every session. Nothing overwritten. <span class="swipe">Just ask.</span>
+      </p>
+      <p class="body-sm" data-reveal style="max-width:44ch">
+        A graph-native memory layer for agents. It keeps the conversation, consolidates
+        the facts, and tells you when it doesn't know.
+      </p>
+      <div class="hero-ctas" data-reveal>
+        <button class="btn btn-primary" id="btn-seed">Load demo memory</button>
+        <a class="btn btn-ghost" href="#workspace">Open workspace</a>
+      </div>
+    </div>
+
+    <!-- The in-app surface, shown early: mono micro-labels over real values. -->
+    <div class="surface" data-reveal>
+      <div class="surface-head">
+        <span class="dot dot-signal" aria-hidden="true"></span>
+        <span class="surface-title">Live graph</span>
+        <span class="tag tag-quiet" id="badge-source" style="margin-left:auto">NO DATA</span>
+      </div>
+      <div class="surface-body stack-lg">
+        <div class="signal-grid">
+          <div>
+            <span class="label">Nodes</span>
+            <span class="signal-value" id="m-nodes">—</span>
+          </div>
+          <div>
+            <span class="label">Edges</span>
+            <span class="signal-value" id="m-edges">—</span>
+          </div>
+          <div>
+            <span class="label">Sessions</span>
+            <span class="signal-value" id="m-sessions">—</span>
+          </div>
+          <div>
+            <span class="label">Current facts</span>
+            <span class="signal-value" id="m-current">—</span>
+          </div>
+          <div>
+            <span class="label">Superseded</span>
+            <span class="signal-value" id="m-superseded">—</span>
+          </div>
+          <div>
+            <span class="label">Open conflicts</span>
+            <span class="signal-value" id="m-conflicts">—</span>
+          </div>
+        </div>
+        <p class="body-sm" id="hero-note" style="margin:0">
+          Load the demo memory to populate all three layers.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== TRUST ============================== -->
+<div class="trust">
+  <div class="shell trust-inner">
+    <span class="label">HydraDB</span><span class="label">&middot;</span>
+    <span class="label">OpenCypher</span><span class="label">&middot;</span>
+    <span class="label">Immutable episodic</span><span class="label">&middot;</span>
+    <span class="label">Deterministic resolution</span><span class="label">&middot;</span>
+    <span class="label">Pre-LLM abstention</span>
+  </div>
+</div>
+
+<!-- ============================== LAYERS ============================== -->
+<section class="section" id="layers">
+  <div class="shell">
+    <div class="section-head">
+      <span class="eyebrow" data-reveal>The three layers</span>
+      <h2 class="h2" data-reveal>One graph. Three jobs.</h2>
+      <p class="body-sm" data-reveal style="font-size:15px">
+        Each layer owns a colour, and that mapping holds everywhere &mdash; in the
+        cards, the evidence list, and the graph.
+      </p>
+    </div>
+
+    <div class="card-grid">
+      <article class="layer-card card-episodic" data-reveal>
+        <svg class="card-glyph" width="34" height="34" viewBox="0 0 34 34" fill="none" style="transform:rotate(-8deg)" aria-hidden="true">
+          <rect x="3" y="6" width="28" height="7" rx="3.5" stroke="#1c1726" stroke-width="2"/>
+          <rect x="3" y="16" width="28" height="7" rx="3.5" stroke="#1c1726" stroke-width="2"/>
+          <path d="M8 26h18" stroke="#1c1726" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span class="eyebrow">Episodic</span>
+        <h3 class="card-title" style="margin-top:8px">What happened</h3>
+        <p class="card-sub">Store the turn. Keep it forever.</p>
+        <div class="card-meta">
+          <span class="tag">Session</span><span class="tag">Turn</span><span class="tag">Utterance</span>
+        </div>
+      </article>
+
+      <article class="layer-card card-semantic" data-reveal>
+        <svg class="card-glyph" width="34" height="34" viewBox="0 0 34 34" fill="none" style="transform:rotate(7deg)" aria-hidden="true">
+          <circle cx="10" cy="10" r="5" stroke="#1c1726" stroke-width="2"/>
+          <circle cx="24" cy="24" r="5" stroke="#1c1726" stroke-width="2"/>
+          <path d="M14 14l6 6" stroke="#1c1726" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span class="eyebrow">Semantic</span>
+        <h3 class="card-title" style="margin-top:8px">What is true</h3>
+        <p class="card-sub">Merge the facts. Supersede, never overwrite.</p>
+        <div class="card-meta">
+          <span class="tag">Entity</span><span class="tag">Fact</span><span class="tag">Conflict</span>
+        </div>
+      </article>
+
+      <article class="layer-card card-procedural" data-reveal>
+        <svg class="card-glyph" width="34" height="34" viewBox="0 0 34 34" fill="none" style="transform:rotate(-5deg)" aria-hidden="true">
+          <path d="M5 24l7-9 6 5 8-12" stroke="#1c1726" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="26" cy="8" r="3" stroke="#1c1726" stroke-width="2"/>
+        </svg>
+        <span class="eyebrow">Procedural</span>
+        <h3 class="card-title" style="margin-top:8px">How to find it</h3>
+        <p class="card-sub">Learn the path. Route the next question.</p>
+        <div class="card-meta">
+          <span class="tag">QueryType</span><span class="tag">RetrievalPath</span><span class="tag">Outcome</span>
+        </div>
+      </article>
+
+      <article class="layer-card card-abstention" data-reveal>
+        <svg class="card-glyph" width="34" height="34" viewBox="0 0 34 34" fill="none" style="transform:rotate(6deg)" aria-hidden="true">
+          <circle cx="17" cy="17" r="12" stroke="#1c1726" stroke-width="2"/>
+          <path d="M9 25L25 9" stroke="#1c1726" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span class="eyebrow">Abstention</span>
+        <h3 class="card-title" style="margin-top:8px">When it doesn't know</h3>
+        <p class="card-sub">Score the coverage. Refuse before the model runs.</p>
+        <div class="card-meta">
+          <span class="tag">Coverage</span><span class="tag">Topical overlap</span><span class="tag">0 tokens</span>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== WORKSPACE ============================== -->
+<section class="section" id="workspace">
+  <div class="shell">
+    <div class="section-head">
+      <span class="eyebrow" data-reveal>The query pipeline</span>
+      <h2 class="h2" data-reveal>Classify. Route. Decide.</h2>
+      <p class="body-sm" data-reveal style="font-size:15px">
+        The verdict below is the abstention router's, not the model's. It is
+        settled before any context is assembled.
+      </p>
+    </div>
+
+    <div class="workspace-grid stack-lg">
+      <!-- Console -->
+      <div class="surface" data-reveal>
+        <div class="surface-head">
+          <span class="dot dot-quiet" aria-hidden="true"></span>
+          <span class="surface-title">Ask</span>
+          <span class="label" id="console-state" style="margin-left:auto">READY</span>
+        </div>
+        <div class="surface-body">
+          <form class="stack-lg" id="query-form">
+            <div class="field">
+              <label class="label" for="q">Question</label>
+              <input class="text-input" id="q" autocomplete="off"
+                     placeholder="What language do I prefer for pipelines?" />
+            </div>
+
+            <div class="console-row">
+              <div class="field">
+                <label class="label" for="path">Retrieval path</label>
+                <select class="select-input" id="path">
+                  <option value="">learned routing</option>
+                  <option value="semantic-only">semantic-only</option>
+                  <option value="episodic-depth-3">episodic-depth-3</option>
+                  <option value="hybrid-conflict">hybrid-conflict</option>
+                  <option value="episodic-depth-2">episodic-depth-2</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="label" for="budget">Context budget</label>
+                <select class="select-input" id="budget">
+                  <option value="4000">4000 tokens</option>
+                  <option value="2000">2000 tokens</option>
+                  <option value="1000">1000 tokens</option>
+                  <option value="400">400 tokens</option>
+                </select>
+              </div>
+            </div>
+
+            <button class="btn btn-primary" type="submit" id="btn-ask" style="width:100%">Run query</button>
+          </form>
+
+          <div class="stack" style="margin-top:24px;gap:10px">
+            <span class="label">Try</span>
+            <div class="row" id="suggestions" style="gap:9px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Verdict -->
+      <div class="surface" data-reveal>
+        <div class="surface-head">
+          <span class="dot dot-signal" aria-hidden="true"></span>
+          <span class="surface-title">Verdict</span>
+          <span class="label" id="verdict-state" style="margin-left:auto">NO QUERY RUN</span>
+        </div>
+        <div class="surface-body stack-lg">
+          <div class="verdict verdict-idle" id="verdict">
+            <span class="label" id="verdict-label" style="color:var(--color-void)">AWAITING QUERY</span>
+            <p class="verdict-answer" id="verdict-answer">Run a query to see the coverage decision.</p>
+            <div class="verdict-foot">
+              <span class="label">Confidence</span>
+              <span class="mono" id="verdict-confidence" style="font-size:15px;font-weight:500">—</span>
+              <span class="label" style="margin-left:auto" id="verdict-generator"></span>
+            </div>
+          </div>
+
+          <div id="verdict-detail"></div>
+
+          <div class="row" id="feedback-block" hidden style="gap:10px">
+            <span class="label" style="width:100%">Was this correct?</span>
+            <button class="chip" id="btn-good">Correct</button>
+            <button class="chip" id="btn-bad">Incorrect</button>
+            <span class="label" id="feedback-note">Trains the router</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Evidence -->
+    <div class="surface" data-reveal style="margin-top:28px">
+      <div class="surface-head">
+        <span class="dot dot-coral" aria-hidden="true"></span>
+        <span class="surface-title">Retrieved subgraph</span>
+        <span class="label" id="evidence-state" style="margin-left:auto">NO EVIDENCE</span>
+      </div>
+      <div class="surface-body">
+        <div class="evidence-list" id="evidence">
+          <div class="empty">Run a query to inspect what it traversed.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== TIMELINE ============================== -->
+<section class="section" id="timeline">
+  <div class="shell">
+    <div class="spread section-head" style="max-width:none">
+      <div class="stack" style="gap:14px;max-width:640px">
+        <span class="eyebrow" data-reveal>The fact ledger</span>
+        <h2 class="h2" data-reveal>Superseded, not deleted.</h2>
+        <p class="body-sm" data-reveal style="font-size:15px">
+          A contradiction creates a conflict, not a mutation. Consolidation picks a
+          winner under a stated policy and leaves the loser intact, with its evidence
+          and its dates.
+        </p>
+      </div>
+      <div class="row" data-reveal>
+        <select class="select-input" id="policy" style="width:auto">
+          <option value="recency">policy · recency</option>
+          <option value="frequency">policy · frequency</option>
+          <option value="confidence">policy · confidence</option>
+          <option value="trust">policy · trust</option>
+        </select>
+        <button class="btn btn-sm" id="btn-consolidate">Consolidate</button>
+      </div>
+    </div>
+
+    <div class="surface" data-reveal>
+      <div class="surface-head">
+        <span class="dot dot-coral" aria-hidden="true"></span>
+        <span class="surface-title">Facts</span>
+        <span class="label" id="timeline-state" style="margin-left:auto">—</span>
+      </div>
+      <div class="surface-body">
+        <div class="timeline" id="timeline-body">
+          <div class="empty">Load the demo memory to populate the semantic layer.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stack-lg" style="margin-top:28px">
+      <div class="spread">
+        <span class="eyebrow">Conflict ledger</span>
+        <span class="label" id="conflict-count">—</span>
+      </div>
+      <div class="stack" id="conflicts"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== GRAPH ============================== -->
+<section class="section" id="graph">
+  <div class="shell">
+    <div class="spread section-head" style="max-width:none">
+      <div class="stack" style="gap:14px;max-width:640px">
+        <span class="eyebrow" data-reveal>The substrate</span>
+        <h2 class="h2" data-reveal>Edges you can walk.</h2>
+        <p class="body-sm" data-reveal style="font-size:15px">
+          Every fact points back at the utterance that produced it. A citation is a
+          traversal, not a guess.
+        </p>
+      </div>
+      <div class="row" data-reveal>
+        <select class="select-input" id="graph-layer" style="width:auto">
+          <option value="">all layers</option>
+          <option value="episodic">episodic</option>
+          <option value="semantic">semantic</option>
+          <option value="procedural">procedural</option>
+        </select>
+        <button class="btn btn-sm" id="btn-graph">Refresh</button>
+      </div>
+    </div>
+
+    <div class="graph-frame" data-reveal>
+      <div id="graph-canvas"><div style="padding:26px"><div class="empty">Load the demo memory to render the graph.</div></div></div>
+      <div class="graph-legend">
+        <span class="row" style="gap:8px"><span class="dot dot-lav"></span><span class="label">Episodic</span></span>
+        <span class="row" style="gap:8px"><span class="dot dot-coral"></span><span class="label">Semantic</span></span>
+        <span class="row" style="gap:8px"><span class="dot dot-mint"></span><span class="label">Procedural</span></span>
+        <span class="label" id="graph-count" style="margin-left:auto">—</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== ROUTING ============================== -->
+<section class="section" id="routing">
+  <div class="shell">
+    <div class="section-head">
+      <span class="eyebrow" data-reveal>The procedural layer</span>
+      <h2 class="h2" data-reveal>Retrieval that learns.</h2>
+      <p class="body-sm" data-reveal style="font-size:15px">
+        Strategies live in the graph, not a config file. Every answered query writes an
+        outcome; the success rate on the edge decides the next route.
+      </p>
+    </div>
+
+    <div class="surface" data-reveal>
+      <div class="surface-head">
+        <span class="dot dot-mint" aria-hidden="true"></span>
+        <span class="surface-title">Routing table</span>
+        <span class="label" id="routing-state" style="margin-left:auto">—</span>
+      </div>
+      <div class="surface-body">
+        <div class="table-wrap" id="routing-body">
+          <div class="empty">Mark answers correct or incorrect to train the router.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== THESIS ============================== -->
+<section class="section thesis" id="thesis">
+  <div class="shell">
+    <span class="eyebrow" data-reveal>The thesis</span>
+    <h2 class="h2" data-reveal style="margin:16px auto 14px;max-width:18ch">
+      Three layers, one answer.
+    </h2>
+    <p class="body-sm" data-reveal style="font-size:15px;max-width:56ch;margin:0 auto 40px">
+      A question enters, the router picks a traversal, and the layers converge. If they
+      don't cover it, nothing is generated at all.
+    </p>
+
+    <svg class="thesis-svg" viewBox="0 0 900 340" fill="none" aria-label="Three memory layers converging on one answer">
+      <g stroke-linecap="round">
+        <path class="draw" style="--len:420" d="M120 60 C 330 60, 360 170, 450 170" stroke="#c9bfea" stroke-width="3"/>
+        <path class="draw" style="--len:380" d="M120 170 C 300 170, 330 170, 450 170" stroke="#f2a683" stroke-width="3"/>
+        <path class="draw" style="--len:420" d="M120 280 C 330 280, 360 170, 450 170" stroke="#b8e6a8" stroke-width="3"/>
+        <path class="draw" style="--len:300" d="M510 170 L 760 170" stroke="#7c6cf5" stroke-width="3"/>
+      </g>
+
+      <g class="node-pop">
+        <circle cx="480" cy="170" r="30" fill="#7c6cf5" stroke="#1c1726" stroke-width="2.5"/>
+        <path d="M468 170h24M480 158v24" stroke="#1c1726" stroke-width="2.5" stroke-linecap="round"/>
+      </g>
+
+      <g font-family="IBM Plex Mono, monospace" font-size="12" fill="#6b6478" letter-spacing="1.5">
+        <text x="120" y="46" text-anchor="middle">EPISODIC</text>
+        <text x="120" y="156" text-anchor="middle">SEMANTIC</text>
+        <text x="120" y="266" text-anchor="middle">PROCEDURAL</text>
+        <text x="790" y="175" text-anchor="start" fill="#1c1726">ANSWER</text>
+      </g>
+
+      <g stroke="#1c1726" stroke-width="2.5">
+        <circle cx="120" cy="60"  r="11" fill="#c9bfea"/>
+        <circle cx="120" cy="170" r="11" fill="#f2a683"/>
+        <circle cx="120" cy="280" r="11" fill="#b8e6a8"/>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<!-- ============================== FAQ ============================== -->
+<section class="section" id="architecture">
+  <div class="shell" style="max-width:900px">
+    <div class="section-head">
+      <span class="eyebrow" data-reveal>How it works</span>
+      <h2 class="h2" data-reveal>Architecture</h2>
+    </div>
+
+    <div class="faq">
+      <details open data-reveal>
+        <summary>Why keep superseded facts at all?<span class="cross" aria-hidden="true"></span></summary>
+        <p>
+          Because "what do I prefer now" and "what did I prefer in March" are different
+          questions, and a flat key-value store can only answer the first. Weave marks the
+          old fact <span class="mono">is_current = false</span>, stamps
+          <span class="mono">valid_until</span>, and links the winner to it with a
+          <span class="mono">SUPERSEDES</span> edge. Both stay answerable, and either
+          answer traces back to the sentence that caused it.
+        </p>
+      </details>
+
+      <details data-reveal>
+        <summary>What decides a conflict?<span class="cross" aria-hidden="true"></span></summary>
+        <p>
+          Ingestion never decides. It records that two facts share a subject and predicate
+          but disagree, and opens a <span class="mono">Conflict</span>. Consolidation
+          resolves it under a stated policy &mdash; recency, frequency, confidence or trust
+          &mdash; and writes that policy onto the node. Genuinely multi-valued predicates,
+          like the tools you use, never conflict at all.
+        </p>
+      </details>
+
+      <details data-reveal>
+        <summary>How does abstention avoid guessing?<span class="cross" aria-hidden="true"></span></summary>
+        <p>
+          Entity coverage and result counts are not enough on their own: a user always has
+          <em>some</em> stored facts, so those signals stay high for a question the graph
+          has never heard of. The decisive signal is topical overlap between the question
+          and the retrieved subgraph. On a miss it returns "I don't know" with zero context
+          tokens spent.
+        </p>
+      </details>
+
+      <details data-reveal>
+        <summary>What does a graph give you that a vector store doesn't?<span class="cross" aria-hidden="true"></span></summary>
+        <p>
+          Edges you can walk deliberately. "What did I use before Go?" is not a similarity
+          problem &mdash; it is one hop along a <span class="mono">SUPERSEDES</span> edge
+          from the fact the question names.
+        </p>
+      </details>
+
+      <details data-reveal>
+        <summary>What runs without an API key?<span class="cross" aria-hidden="true"></span></summary>
+        <p>
+          All of it. Extraction falls back to a deterministic rule-based pass and answers
+          are composed from the retrieved facts, cited. Adding a key switches both to an
+          LLM &mdash; and the badge in the nav always says which mode produced what you are
+          looking at.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== SIGNOFF ============================== -->
+<section class="section-tight" style="text-align:center;overflow:hidden">
+  <div class="shell">
+    <p class="body-sm" data-reveal style="font-size:15px;max-width:40ch;margin:0 auto 10px">
+      Agents already have the storage. Weave gives them a past.
+    </p>
+    <h2 class="signoff" data-reveal>WEAVE</h2>
+    <div class="row" data-reveal style="justify-content:center;margin-top:26px">
+      <button class="btn btn-primary" id="btn-seed-2">Load demo memory</button>
+      <button class="btn btn-sm" id="btn-reset">Reset graph</button>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="shell spread">
+    <span class="label">Weave &middot; three-layer cognitive memory &middot; MIT</span>
+    <span class="label" id="footer-config">—</span>
+  </div>
+</footer>
+
+</main>
+
+<div class="toast" id="toast" hidden></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

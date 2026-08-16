@@ -1,0 +1,94 @@
+[
+  {
+    "session_id": "sess-01",
+    "user_id": "ada",
+    "session_number": 1,
+    "timestamp": "2025-01-14T09:12:00",
+    "turns": [
+      {"speaker": "user", "text": "I'm setting up a new ETL project this quarter. I prefer Python for data pipelines."},
+      {"speaker": "assistant", "text": "Python is a solid choice — pandas and Airflow will cover most of that workload."},
+      {"speaker": "user", "text": "I live in Berlin, so most of my syncs run overnight CET."},
+      {"speaker": "assistant", "text": "Scheduling them off-peak makes sense for a European timezone."},
+      {"speaker": "user", "text": "I also really like green tea while I work."}
+    ]
+  },
+  {
+    "session_id": "sess-02",
+    "user_id": "ada",
+    "session_number": 2,
+    "timestamp": "2025-02-03T15:40:00",
+    "turns": [
+      {"speaker": "user", "text": "I work at Northwind Labs on the data platform team."},
+      {"speaker": "assistant", "text": "What does the platform stack look like there?"},
+      {"speaker": "user", "text": "I use Postgres and Docker every day."},
+      {"speaker": "assistant", "text": "Postgres plus containerised workers is a dependable combination."}
+    ]
+  },
+  {
+    "session_id": "sess-03",
+    "user_id": "ada",
+    "session_number": 3,
+    "timestamp": "2025-03-19T11:05:00",
+    "turns": [
+      {"speaker": "user", "text": "I've been learning Rust in the evenings."},
+      {"speaker": "assistant", "text": "Rust has a steep curve but the ownership model pays off."},
+      {"speaker": "user", "text": "My favorite color is teal, in case you ever generate charts for me."},
+      {"speaker": "assistant", "text": "Noted — I'll use teal as the primary series colour."}
+    ]
+  },
+  {
+    "session_id": "sess-04",
+    "user_id": "ada",
+    "session_number": 4,
+    "timestamp": "2025-04-08T08:55:00",
+    "turns": [
+      {"speaker": "user", "text": "The overnight jobs keep timing out. Can you look at the retry logic?"},
+      {"speaker": "assistant", "text": "A bounded exponential backoff with jitter would smooth the retries."},
+      {"speaker": "user", "text": "I hate coffee, so these late debugging sessions run on tea."}
+    ]
+  },
+  {
+    "session_id": "sess-05",
+    "user_id": "ada",
+    "session_number": 5,
+    "timestamp": "2025-05-22T13:30:00",
+    "turns": [
+      {"speaker": "user", "text": "Update on the stack: I switched to Go for pipelines last month."},
+      {"speaker": "assistant", "text": "Go should cut the cold-start time on those workers considerably."},
+      {"speaker": "user", "text": "The concurrency story is much better for our fan-out jobs."}
+    ]
+  },
+  {
+    "session_id": "sess-06",
+    "user_id": "ada",
+    "session_number": 6,
+    "timestamp": "2025-06-30T17:20:00",
+    "turns": [
+      {"speaker": "user", "text": "I moved to Lisbon at the start of the month."},
+      {"speaker": "assistant", "text": "That shifts you to WEST — an hour behind your old schedule."},
+      {"speaker": "user", "text": "Right, so I need to re-cut the overnight windows."}
+    ]
+  },
+  {
+    "session_id": "sess-07",
+    "user_id": "ada",
+    "session_number": 7,
+    "timestamp": "2025-07-16T10:10:00",
+    "turns": [
+      {"speaker": "user", "text": "We outgrew Postgres for analytics. I now use ClickHouse for the reporting layer."},
+      {"speaker": "assistant", "text": "ClickHouse will handle those aggregate scans far better."},
+      {"speaker": "user", "text": "I still run Docker for everything else though."}
+    ]
+  },
+  {
+    "session_id": "sess-08",
+    "user_id": "ada",
+    "session_number": 8,
+    "timestamp": "2025-08-11T19:45:00",
+    "turns": [
+      {"speaker": "user", "text": "I adopted a dog named Mira last weekend."},
+      {"speaker": "assistant", "text": "Congratulations — that will change your evening schedule."},
+      {"speaker": "user", "text": "I am allergic to shellfish, so skip those if you ever plan meals for me."}
+    ]
+  }
+]

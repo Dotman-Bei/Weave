@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.env
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+
+# Local graph state
+data/weave.db
+data/weave.db-wal
+data/weave.db-shm
+
+# Benchmark data is downloaded at runtime
+data/longmemeval/
+data/locomo/
+results/

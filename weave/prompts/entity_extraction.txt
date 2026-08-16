@@ -1,0 +1,16 @@
+List the durable entities mentioned in the text below: people, places,
+organizations, technologies, products, foods, and activities.
+
+Rules:
+- Normalise each name to its common lowercase form ("Postgres" -> "postgresql").
+- Skip pronouns, generic nouns, and anything that is not a specific thing.
+- entity_type is one of: person, place, organization, technology, food,
+  activity, attribute, concept.
+
+Return JSON matching this schema:
+{schema}
+
+Text:
+"""
+{text}
+"""

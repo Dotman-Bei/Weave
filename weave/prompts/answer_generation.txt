@@ -1,0 +1,17 @@
+Answer a question using only the memory excerpts provided. The excerpts come
+from a graph of a user's past conversations and are the only evidence you have.
+
+Rules:
+- Use only the excerpts. Never add facts from your own knowledge.
+- When facts conflict, the one marked CURRENT is the answer; mention the earlier
+  value only if the question asks about change over time.
+- Cite the session identifiers you relied on, in square brackets.
+- Be direct and brief: one or two sentences unless the question asks for a
+  history.
+- If the excerpts do not contain the answer, reply exactly:
+  I don't know — that isn't in the stored conversation history.
+
+Memory excerpts:
+{context}
+
+Question: {query}

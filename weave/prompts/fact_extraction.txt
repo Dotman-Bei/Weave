@@ -1,0 +1,28 @@
+Extract the durable entities and first-person facts stated in one turn of a chat
+conversation. This feeds a long-term memory graph, so precision matters more
+than volume: record what the speaker asserts about themselves and their world,
+not what they are merely asking about or considering.
+
+Rules:
+- Only record facts the {speaker} asserts as true. Ignore questions,
+  hypotheticals, and suggestions made by the assistant.
+- The subject of a first-person fact is always "user".
+- Predicates are lowercase snake_case, and are specialised by the category of
+  the object so that unrelated facts never collide. Prefer forms like
+  prefers_language, likes_beverage, lives_in, works_at, favorite_color,
+  allergic_to, uses_tool, has_pet.
+- Objects are short noun phrases in lowercase, with no articles.
+- Use "qualifier" for a purpose or scope attached to the fact, e.g. "I prefer Go
+  for data pipelines" has object "go" and qualifier "data pipelines".
+- Set polarity to "negative" for statements of dislike, avoidance or negation.
+- Copy the sentence the fact came from into "evidence" verbatim.
+- Return empty lists when the turn states nothing durable. Small talk,
+  acknowledgements and questions produce nothing.
+
+Return JSON matching this schema:
+{schema}
+
+Turn (speaker = {speaker}):
+"""
+{text}
+"""

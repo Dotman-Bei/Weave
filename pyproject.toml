@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "weave-memory"
+version = "0.1.0"
+description = "Three-layer cognitive memory with cross-session fact consolidation, on a graph substrate."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.27.0",
+    "pydantic>=2.6.0",
+    "httpx>=0.27.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+# The Bolt/OpenCypher graph backend. Despite the historical name this is NOT
+# HydraDB -- the real product is a REST API (see the `sidecar` extra); this
+# talks to any Bolt server and is verified against Neo4j.
+hydra = ["neo4j>=5.18.0"]
+# HydraDB proper: the managed context API, used as an episodic text index.
+sidecar = ["hydradb-sdk>=2,<3"]
+# Entity/fact extraction and grounded answer generation via an LLM.
+llm = ["anthropic>=0.40.0", "tiktoken>=0.6.0"]
+# Semantic similarity fallback (specification 4.1). Static embeddings: numpy
+# only, no torch, ~30MB model. Weave falls back to lexical scoring without it.
+embeddings = ["model2vec>=0.9.0"]
+benchmark = ["datasets>=2.17.0"]
+dev = ["pytest>=8.0.0"]
+all = [
+    "neo4j>=5.18.0",
+    "hydradb-sdk>=2,<3",
+    "anthropic>=0.40.0",
+    "tiktoken>=0.6.0",
+    "model2vec>=0.9.0",
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+weave = "weave.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["weave*", "benchmarks*"]
+
+[tool.setuptools.package-data]
+weave = ["prompts/*.txt", "web/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

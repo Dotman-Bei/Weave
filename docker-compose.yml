@@ -1,0 +1,37 @@
+# Weave runs on its embedded graph engine by default and needs nothing here.
+# This file is for the optional HydraDB (Bolt/OpenCypher) backend.
+services:
+  hydradb:
+    image: ${HYDRADB_IMAGE:-hydradb/hydradb:latest}
+    container_name: weave-hydradb
+    ports:
+      - "7687:7687"   # Bolt
+      - "7474:7474"   # HTTP
+    environment:
+      HYDRA_AUTH_TOKEN: ${WEAVE_HYDRA_TOKEN:-local-development-token-32-bytes}
+      HYDRA_ACCEPT_LICENSE: "yes"
+    volumes:
+      - hydradb-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  weave:
+    build: .
+    container_name: weave-api
+    depends_on:
+      - hydradb
+    ports:
+      - "8000:8000"
+    environment:
+      WEAVE_BACKEND: hydra
+      WEAVE_HYDRA_URI: neo4j://hydradb:7687
+      WEAVE_HYDRA_TOKEN: ${WEAVE_HYDRA_TOKEN:-local-development-token-32-bytes}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    command: ["weave", "serve", "--host", "0.0.0.0", "--port", "8000"]
+    profiles: ["full"]
+
+volumes:
+  hydradb-data:

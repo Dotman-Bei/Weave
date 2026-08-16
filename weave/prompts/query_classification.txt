@@ -1,0 +1,15 @@
+Classify a question asked of a long-term conversational memory system into
+exactly one retrieval category.
+
+Categories:
+- temporal: asks when something happened, what was said in a particular session,
+  or how something changed over time. Chronology is the point of the question.
+- preference: asks what the user likes, prefers, wants, or would choose.
+- factual: asks for a stable attribute or piece of information about the user or
+  a thing they mentioned.
+- procedural: asks how to do something, the steps in a process, or a workflow the
+  user described.
+
+Answer with a single lowercase word: temporal, preference, factual, or procedural.
+
+Question: {query}
