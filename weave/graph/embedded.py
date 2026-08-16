@@ -58,6 +58,39 @@ CREATE INDEX IF NOT EXISTS idx_edges_out       ON edges(start_id, type);
 CREATE INDEX IF NOT EXISTS idx_edges_in        ON edges(end_id, type);
 CREATE INDEX IF NOT EXISTS idx_edges_type      ON edges(type);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_edges_uniq ON edges(start_id, end_id, type);
+
+-- Full-text index over utterance text.
+--
+-- Without it, finding candidate utterances means a LIKE scan per query term:
+-- on a 6,000-utterance haystack that is the dominant cost of a query. FTS5
+-- turns the same lookup into an index probe.
+--
+-- Kept in sync by triggers rather than by application code, so the index
+-- cannot drift from the nodes table -- a stale text index silently returns
+-- wrong answers, which is worse than having none.
+CREATE VIRTUAL TABLE IF NOT EXISTS nodes_fts USING fts5(
+    id UNINDEXED,
+    text,
+    tokenize = "unicode61"
+);
+CREATE TRIGGER IF NOT EXISTS nodes_fts_insert AFTER INSERT ON nodes
+WHEN new.primary_label = 'Utterance'
+BEGIN
+    INSERT INTO nodes_fts(id, text)
+    VALUES (new.id, json_extract(new.props, '$.text'));
+END;
+CREATE TRIGGER IF NOT EXISTS nodes_fts_update AFTER UPDATE ON nodes
+WHEN new.primary_label = 'Utterance'
+BEGIN
+    DELETE FROM nodes_fts WHERE id = old.id;
+    INSERT INTO nodes_fts(id, text)
+    VALUES (new.id, json_extract(new.props, '$.text'));
+END;
+CREATE TRIGGER IF NOT EXISTS nodes_fts_delete AFTER DELETE ON nodes
+WHEN old.primary_label = 'Utterance'
+BEGIN
+    DELETE FROM nodes_fts WHERE id = old.id;
+END;
 """
 
 
@@ -115,6 +148,22 @@ def _compile_order(order_by: OrderBy | None, alias: str = "n") -> str:
         arrow = "DESC" if str(direction).lower().startswith("d") else "ASC"
         parts.append(f"json_extract({alias}.props, '$.{_ident(prop)}') {arrow}")
     return " ORDER BY " + ", ".join(parts)
+
+
+_FTS_SAFE = re.compile(r"[^A-Za-z0-9]+")
+
+
+def _fts_term(term: str) -> str:
+    """Quote a term for FTS5.
+
+    User text drives this, and FTS5's MATCH grammar treats characters like
+    ``"`` and ``*`` as syntax -- an unescaped apostrophe or hyphen turns a
+    search into a syntax error. Stripping to alphanumerics and quoting is the
+    conservative choice: the worst case is a term that matches nothing, never
+    a crashed query.
+    """
+    cleaned = _FTS_SAFE.sub(" ", term or "").strip()
+    return f'"{cleaned}"' if cleaned else ""
 
 
 def _row_to_node(row: sqlite3.Row) -> Node:
@@ -273,6 +322,33 @@ class SqliteTx(Tx):
         else:
             row = self._conn.execute("SELECT COUNT(*) AS c FROM edges").fetchone()
         return int(row["c"])
+
+    def search_text(
+        self, label: str, prop: str, terms: Sequence[str], limit: int = 60
+    ) -> list[Node]:
+        """FTS5-backed override of the contract's substring scan.
+
+        Only utterance text is indexed, so anything else falls back to the
+        default. Terms are OR-ed and ranked by FTS5's own relevance, which is
+        strictly better than the arbitrary order a LIKE scan returns.
+        """
+        cleaned = [_fts_term(term) for term in terms]
+        cleaned = [term for term in cleaned if term]
+        if label != "Utterance" or prop != "text" or not cleaned:
+            return super().search_text(label, prop, terms, limit)
+
+        query = " OR ".join(cleaned)
+        try:
+            rows = self._conn.execute(
+                "SELECT n.* FROM nodes_fts f JOIN nodes n ON n.id = f.id "
+                "WHERE nodes_fts MATCH ? ORDER BY rank LIMIT ?",
+                (query, limit * len(cleaned)),
+            ).fetchall()
+        except sqlite3.OperationalError:
+            # An older database file predating the index, or a malformed
+            # query: correctness does not depend on the index existing.
+            return super().search_text(label, prop, terms, limit)
+        return [_row_to_node(row) for row in rows]
 
     def expand(
         self,

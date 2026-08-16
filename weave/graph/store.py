@@ -254,6 +254,22 @@ class Tx(abc.ABC):
         the total returned.
         """
 
+    def search_text(
+        self, label: str, prop: str, terms: Sequence[str], limit: int = 60
+    ) -> list[Node]:
+        """Nodes whose ``prop`` contains any of ``terms``, best-effort ranked.
+
+        Not abstract: the default satisfies the contract with the substring
+        filter every backend already implements, so a backend only overrides
+        this if it has a real text index to offer. Callers get the same answers
+        either way -- only the cost differs.
+        """
+        found: dict[str, Node] = {}
+        for term in terms:
+            for node in self.match(label, {prop: contains(term)}, limit=limit):
+                found[node.id] = node
+        return list(found.values())[: limit * max(1, len(list(terms)))]
+
     @abc.abstractmethod
     def count_edges(self, rel_type: str | None = None) -> int:
         ...

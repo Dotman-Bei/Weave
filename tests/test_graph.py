@@ -177,3 +177,40 @@ def test_contains_is_case_insensitive_on_every_backend(store):
         for probe in ("lisbon", "Lisbon", "LISBON"):
             found = tx.match(S.UTTERANCE, {"text": contains(probe)})
             assert [n.id for n in found] == ["u1"], f"{probe!r} did not match"
+
+
+def test_search_text_finds_terms_and_stays_in_sync(store):
+    """The text index must never disagree with the nodes table.
+
+    A stale index returns confidently wrong answers, which is worse than
+    having none — so it is maintained by triggers, and this checks the whole
+    lifecycle: insert, update, delete.
+    """
+    with store.transaction() as tx:
+        tx.create_node([S.UTTERANCE], {"id": "u1", "text": "I moved to Lisbon in March."})
+        tx.create_node([S.UTTERANCE], {"id": "u2", "text": "I still run Docker for everything."})
+
+    with store.transaction() as tx:
+        found = tx.search_text(S.UTTERANCE, "text", ["lisbon"])
+        assert [n.id for n in found] == ["u1"]
+        assert {n.id for n in tx.search_text(S.UTTERANCE, "text", ["lisbon", "docker"])} == {"u1", "u2"}
+        assert tx.search_text(S.UTTERANCE, "text", ["kubernetes"]) == []
+
+    with store.transaction() as tx:
+        tx.set_props("u1", {"text": "I moved to Porto instead."})
+    with store.transaction() as tx:
+        assert tx.search_text(S.UTTERANCE, "text", ["lisbon"]) == [], "index kept stale text"
+        assert [n.id for n in tx.search_text(S.UTTERANCE, "text", ["porto"])] == ["u1"]
+
+    store.reset()
+    with store.transaction() as tx:
+        assert tx.search_text(S.UTTERANCE, "text", ["porto"]) == [], "index outlived reset"
+
+
+def test_search_text_survives_punctuation(store):
+    """Query text is user input; FTS5 MATCH syntax must not leak into it."""
+    with store.transaction() as tx:
+        tx.create_node([S.UTTERANCE], {"id": "u1", "text": "My co-worker's laptop broke."})
+    with store.transaction() as tx:
+        for probe in ("co-worker's", '"quoted"', "wild*card", "OR", "("):
+            tx.search_text(S.UTTERANCE, "text", [probe])  # must not raise

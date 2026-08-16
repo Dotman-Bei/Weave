@@ -45,6 +45,9 @@ _SIDECAR_SUFFICIENT = 5
 _UNCOVERED_SIGNIFICANT = 0.25
 _UNCOVERED_WEIGHT = 0.9
 
+# How many of the top-scoring items count as "the evidence behind the answer".
+_GROUNDING_HEAD = 3
+
 ABSTENTION_ANSWER = (
     "I don't know — that isn't in the stored conversation history."
 )
@@ -208,7 +211,10 @@ def token_weights(tx: Tx, query_tokens: Iterable[str]) -> dict[str, float]:
     tokens = {
         token
         for token in query_tokens
-        if len(token) >= 3
+        # Numerals are short but among the most discriminating tokens a
+        # question has -- a 30-gallon tank is not a 20-gallon one -- so they
+        # are kept despite failing the length test.
+        if (len(token) >= 3 or token.isdigit())
         and token not in _OPERATOR_TOKENS
         and token not in _VAGUE_TOKENS
     }
@@ -903,13 +909,11 @@ class RetrievalService:
         # index, so repeating the scan pays for the same answer twice. Running
         # both was measurably slower than either alone.
         if from_sidecar < _SIDECAR_SUFFICIENT:
-            for token in query_tokens[:6]:
-                if len(token) < 3:
-                    continue
-                for node in tx.match(
-                    S.UTTERANCE, {"text": contains(token)}, limit=_TOKEN_CANDIDATES
-                ):
-                    utterances[node.id] = node
+            terms = [token for token in query_tokens[:6] if len(token) >= 3]
+            for node in tx.search_text(
+                S.UTTERANCE, "text", terms, limit=_TOKEN_CANDIDATES
+            ):
+                utterances[node.id] = node
 
         if not utterances:
             # Nothing anchored the question at all: rank recent utterances so
@@ -1116,8 +1120,13 @@ class RetrievalService:
         # high cosine cancel this signal defeats the check it exists to make.
         uncovered = 0.0
         if weights and evidence:
+            # Scored against the evidence that actually composes the answer,
+            # not the union of everything retrieved. On a real haystack some
+            # unrelated utterance almost always contains the missing word --
+            # "films" turns up in a chat about movies -- which cancelled the
+            # signal while the sentence being quoted was still about cameras.
             seen: set[str] = set()
-            for item in evidence:
+            for item in evidence[:_GROUNDING_HEAD]:
                 seen.update(_stem(token) for token in content_tokens(item.text))
             total_weight = sum(weights.values())
             if total_weight > 0:
