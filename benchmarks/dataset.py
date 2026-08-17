@@ -41,6 +41,11 @@ class BenchmarkSample:
     # predicate -> the object that should be current once the conflict for that
     # predicate has been resolved. Empty when the sample raises no conflict.
     expected_resolution: dict[str, str] = field(default_factory=dict)
+    # The turns the dataset marks as holding the answer. Retrieval is measured
+    # against these rather than against the answer string: LongMemEval's
+    # expected answers are paraphrases ("february 14th" for a turn that says
+    # "Feb 14"), so substring containment scores a perfect retrieval as a miss.
+    evidence_texts: list[str] = field(default_factory=list)
 
     @property
     def haystack_tokens(self) -> int:
@@ -323,6 +328,13 @@ def _adapt_longmemeval(record: dict[str, Any]) -> BenchmarkSample:
     should_abstain = question_id.endswith("_abs")
     answer = "" if should_abstain else str(record.get("answer") or "")
 
+    evidence_texts = [
+        (message.get("content") or "").strip()
+        for messages in raw_sessions
+        for message in messages
+        if message.get("has_answer") and (message.get("content") or "").strip()
+    ]
+
     return BenchmarkSample(
         id=question_id,
         question=str(record.get("question", "")),
@@ -330,6 +342,7 @@ def _adapt_longmemeval(record: dict[str, Any]) -> BenchmarkSample:
         sessions=sessions,
         answer_keywords=[answer.lower()] if answer else [],
         should_abstain=should_abstain,
+        evidence_texts=evidence_texts,
     )
 
 

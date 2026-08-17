@@ -23,6 +23,17 @@ from weave.graph.embedded import EmbeddedGraphStore
 from .dataset import BenchmarkSample, load_dataset
 
 
+def _overlaps(evidence: str, context: str, span: int = 60) -> bool:
+    """Whether a gold evidence turn is present in the assembled context.
+
+    Compared on a leading span rather than in full: the context truncates long
+    utterances, so requiring the whole turn would fail on evidence that is
+    demonstrably there.
+    """
+    probe = " ".join((evidence or "").lower().split())[:span]
+    return bool(probe) and probe in context
+
+
 @dataclass
 class SampleResult:
     question_id: str
@@ -101,9 +112,22 @@ class LongMemEvalBenchmark:
         understates retrieval quality -- this metric measures the half Weave is
         actually responsible for.
         """
-        if sample.should_abstain or not sample.answer_keywords:
+        if sample.should_abstain:
             return None
         lowered = (context or "").lower()
+
+        # Prefer the dataset's own evidence turns. LongMemEval's expected
+        # answers are paraphrases -- "february 14th" for a turn reading
+        # "Feb 14", "the sports store downtown" for one naming the shop -- so
+        # substring containment scores a *perfect* retrieval as a miss. On six
+        # sampled misses, three had the answer string nowhere in the haystack
+        # at all, which made the metric pessimistic by construction.
+        if sample.evidence_texts:
+            return any(
+                _overlaps(evidence, lowered) for evidence in sample.evidence_texts
+            )
+        if not sample.answer_keywords:
+            return None
         return all(keyword.lower() in lowered for keyword in sample.answer_keywords)
 
     # -- run ---------------------------------------------------------------
