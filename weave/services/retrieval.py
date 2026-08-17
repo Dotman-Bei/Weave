@@ -39,6 +39,18 @@ _TOKEN_CANDIDATES = 60
 # is not populated or did not understand the question, so the scan still runs.
 _SIDECAR_SUFFICIENT = 5
 
+# Nearest neighbours pulled in per query. Deliberately modest: these are
+# candidates, still subject to the same scoring and abstention checks as
+# everything else, so a loose neighbour cannot manufacture an answer.
+_VECTOR_CANDIDATES = 40
+
+# Grounding below which the episodic layer is consulted even though the routed
+# path was semantic. Raised from 0.34 because a distilled fact can look like a
+# decent match on a stem collision alone, and that false confidence kept the
+# raw conversation out of reach. High enough to catch it, low enough to leave a
+# genuinely strong fact match alone.
+_WIDEN_BELOW = 0.6
+
 # Share of the query's weighted content that the retrieved subgraph must not
 # mention before the match is called incidental, and how hard that counts.
 # Both measured against LongMemEval's abstention set, not guessed.
@@ -584,7 +596,14 @@ class RetrievalService:
             # costs more than one extra bounded traversal.
             best = max((self._grounding(e, query_tokens) for e in evidence), default=0.0)
             may_widen = restrict_layers is None or "episodic" in restrict_layers
-            if best < 0.34 and may_widen and "episodic" not in result.layers_touched:
+            # Widen whenever the episodic layer has not been consulted at all,
+            # not only when the semantic layer scored badly. A distilled fact
+            # can look like a good match on a stem collision alone -- "designer"
+            # and "designating" share a five-character prefix -- and that false
+            # confidence was enough to keep the raw conversation out of reach,
+            # even though the sentence answering the question was sitting two
+            # nearest neighbours away.
+            if best < _WIDEN_BELOW and may_widen and "episodic" not in result.layers_touched:
                 widened = self._episodic(
                     tx,
                     [n.id for n in entity_nodes],
@@ -914,6 +933,18 @@ class RetrievalService:
                 S.UTTERANCE, "text", terms, limit=_TOKEN_CANDIDATES
             ):
                 utterances[node.id] = node
+
+            # Wording is not the only way in. Selecting candidates lexically
+            # means an utterance that answers the question in different words
+            # is never scored at all -- the embedding could only re-rank what
+            # the text filter had already found. Measured on LongMemEval
+            # misses, the gold utterance was often the 2nd or 35th nearest
+            # neighbour while being lexically invisible.
+            if query_vector:
+                for node in tx.search_vector(
+                    S.UTTERANCE, "embedding", query_vector, limit=_VECTOR_CANDIDATES
+                ):
+                    utterances.setdefault(node.id, node)
 
         if not utterances:
             # Nothing anchored the question at all: rank recent utterances so

@@ -318,14 +318,8 @@ section[id], main[id] { scroll-margin-top: 100px; }
   border-radius: 999px;
   /* Taller bar: the pill needs enough vertical room to hold a real button
      without it touching the edges. */
-  padding: 14px 16px 14px 30px;
-  min-height: 70px;
-  /* A wider bar: the pill spans the content column rather than shrink-wrapping
-     its links, so the brand sits left and the CTA right with real space
-     between them. Still capped, so it never runs the full width of a large
-     display. */
-  width: 100%;
-  max-width: 1140px;
+  padding: 14px 14px 14px 26px;
+  min-height: 62px;
   background: rgba(250, 247, 253, 0.65);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);

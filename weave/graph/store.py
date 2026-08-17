@@ -270,6 +270,28 @@ class Tx(abc.ABC):
                 found[node.id] = node
         return list(found.values())[: limit * max(1, len(list(terms)))]
 
+    def search_vector(
+        self, label: str, prop: str, query_vector: Sequence[float], limit: int = 40
+    ) -> list[Node]:
+        """Nodes ranked by cosine similarity of ``prop`` to ``query_vector``.
+
+        Default implementation scans, which is honest about what it costs and
+        works on every backend. It exists because selecting candidates by
+        wording alone means evidence that shares no word with the question is
+        never even scored -- the embedding could only ever re-rank what the
+        lexical filter already found.
+        """
+        from ..embeddings import cosine
+
+        scored: list[tuple[float, Node]] = []
+        for node in self.match(label):
+            vector = node.get(prop)
+            if not vector:
+                continue
+            scored.append((cosine(query_vector, vector), node))
+        scored.sort(key=lambda pair: pair[0], reverse=True)
+        return [node for _, node in scored[:limit]]
+
     @abc.abstractmethod
     def count_edges(self, rel_type: str | None = None) -> int:
         ...
