@@ -1,7 +1,14 @@
 # The deployment serves the API and the workspace UI. Nothing else needs to be
-# uploaded -- and `data/` in particular is ~283MB of benchmark corpora that is
-# gitignored but still visible to `vercel` when deploying from a working copy.
-data/
+# uploaded -- and the benchmark corpora in particular are ~283MB, gitignored
+# but still visible to `vercel` when deploying from a working copy.
+#
+# Excluded by subdirectory rather than as a whole `data/`, because
+# data/sample_sessions/demo_user.json is the corpus behind the workspace's
+# "Load demo memory" button. Ignoring all of data/ makes /demo/seed return
+# "no sample sessions" on the deployment while working perfectly in dev.
+data/longmemeval/
+data/locomo/
+data/weave.db*
 results/
 benchmarks/
 tests/
