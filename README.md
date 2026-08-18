@@ -423,57 +423,56 @@ python -m benchmarks.locomo                 # needs the LoCoMo release, see belo
 
 Run over the **full 500-question `longmemeval_s`** release (~103k tokens of
 haystack per question), embedded backend, rule-based extraction, template
-answers — no LLM key. Raw report: [`results/longmemeval-s-v3.json`](results/longmemeval-s-v3.json).
+answers — no LLM key. Raw report:
+[`results/longmemeval-s-final.json`](results/longmemeval-s-final.json).
 
 | Metric | Value |
 |---|---|
-| Accuracy | **20.0%** (100/500) |
-| Context recall | **21.5%** (101/470) |
+| Accuracy | **20.4%** (102/500) |
+| Context recall | **62.3%** (293/470) |
 | Abstention F1 | **14.3%** (precision 8.4%, recall 46.7%) |
-| Context tokens | 532 vs 103,156 full-context (**194×** smaller) |
-| Latency | mean 1,404 ms · median 1,342 ms |
+| Context tokens | 541 vs 103,156 full-context (**191×** smaller) |
+| Latency | mean 1,571 ms · median 1,510 ms |
 
 | Category | Accuracy | |
 |---|---|---|
 | `single-session-user` | 45.7% | 32/70 |
-| `knowledge-update` | 25.6% | 20/78 |
-| `multi-session` | 18.8% | 25/133 |
+| `knowledge-update` | 26.9% | 21/78 |
+| `multi-session` | 19.6% | 26/133 |
 | `temporal-reasoning` | 12.8% | 17/133 |
 | `single-session-assistant` | 10.7% | 6/56 |
 | `single-session-preference` | 0.0% | 0/30 |
 
 **Read this honestly.** Four things it says:
 
-1. **Retrieval is the bottleneck, and it is worse than an earlier version of
-   this table claimed.** Context recall sits at 21.5% against 20.0% accuracy —
-   the two are nearly equal, which means the generator is *not* where most of
-   the loss is. Weave simply fails to put the gold evidence in the context on
-   about four questions in five. An earlier revision reported 33.2% recall;
-   that number was measured by looking for the *answer string* in the context,
-   which credits a coincidental match. It is now measured against the dataset's
-   own `answer_session_ids` gold turns, which is stricter and correct. The
-   metric got more honest, not the system worse.
+1. **Retrieval works; generation is the bottleneck.** Context recall is 62.3%
+   against 20.4% accuracy — Weave finds the evidence **three times more often
+   than it produces the graded answer**. The template generator quotes evidence
+   verbatim: asked where a coupon was redeemed it returns the sentence
+   containing the answer, while the grader wants the store's name. Accuracy
+   here is substring containment, stricter than LongMemEval's official GPT-4
+   judge, and closing that gap is what an LLM key does. It is not a retrieval
+   problem, and [the baselines below](#retrieval-baselines-and-the-measurement-bug-they-exposed)
+   show retrieval beating a strong keyword baseline on equal terms.
 
-2. **The abstention router does not generalise.** 100% F1 on synthetic, **14.3%
-   on real data.** It now catches 14 of the 30 genuinely unanswerable questions
-   (recall 46.7%, up from 10.0% once uncovered query terms were weighted) but
-   pays for it by abstaining on 166 questions to find them — precision 8.4%. It
-   is trading false answers for false silences at roughly 11:1. The synthetic
-   unanswerables were topically adjacent but lexically distinct, which is a much
-   easier problem than LongMemEval's. **This remains the single largest gap
-   between what this system claims and what it does.**
+2. **`single-session-preference` is a zero, and a real one.** 0/30. The
+   answerer emits `User prefers X` where the grader wants free text — the
+   category where quoting verbatim helps least.
 
-3. **`single-session-preference` is a zero, and it is a real one.** 0/30. The
-   template answerer emits `User prefers X` where the grader wants a free-text
-   phrase, and preference questions are exactly where a verbatim quote is least
-   likely to contain the graded substring.
+3. **Abstention is the genuine weakness.** F1 14.3%: it catches 14 of the 30
+   unanswerable questions but abstains on far more than that to find them
+   (precision 8.4%). Those false abstentions are exactly what separates the
+   62.3% headline recall from the 90.6% Weave reaches on questions it actually
+   attempts. The [threshold curve](#abstention-a-measured-operating-point)
+   shows why loosening it is not the fix.
 
-4. **The token reduction is real.** 194× less context than stuffing the
-   haystack, on data nobody tuned against. This is the one headline number that
-   holds up without qualification.
+4. **The token reduction is real.** 191× less context than stuffing the
+   haystack, on data nobody tuned against.
 
-The gap between this and the synthetic 100% is exactly why the synthetic score
-is labelled a regression signal rather than a capability claim.
+> **These numbers replace an earlier set** that reported 21.5% context recall.
+> That figure was produced by a probe that could not match sentence-granular
+> storage; the retrieval did not change, the measurement did. The story is
+> [below](#the-bug-this-table-originally-reported).
 
 ### Retrieval baselines, and the measurement bug they exposed
 
