@@ -775,8 +775,15 @@ data/             sample_sessions/
 ## Deploying to Vercel
 
 ```bash
-vercel deploy          # api/index.py + vercel.json + requirements.txt are in the repo
+vercel deploy          # api/index.py + requirements.txt are in the repo
 ```
+
+Set **Application Preset** to `FastAPI` and leave **Root Directory** blank —
+`api/index.py` imports `weave`, which is only importable from the repo root.
+There is deliberately **no `vercel.json`**: the FastAPI preset routes to the
+app itself, and a `rewrites` rule pointing at `/api/index` makes every request
+arrive with that path, so FastAPI answers `{"detail":"Not Found"}` for every
+route including `/health`.
 
 Set these in the Vercel dashboard. The first four are defaulted in
 [`api/index.py`](api/index.py) so a deploy works without touching anything,
