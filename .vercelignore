@@ -1,0 +1,19 @@
+# The deployment serves the API and the workspace UI. Nothing else needs to be
+# uploaded -- and `data/` in particular is ~283MB of benchmark corpora that is
+# gitignored but still visible to `vercel` when deploying from a working copy.
+data/
+results/
+benchmarks/
+tests/
+scripts/
+.venv/
+.pytest_cache/
+*.egg-info/
+__pycache__/
+
+# Docs and specs: useful in the repo, dead weight in a function bundle.
+build.md
+frontend.md
+audit.md
+docker-compose.yml
+Dockerfile

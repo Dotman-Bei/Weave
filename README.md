@@ -773,6 +773,43 @@ tests/            graph · ingestion · conflict · retrieval · abstention · e
 data/             sample_sessions/
 ```
 
+## Deploying to Vercel
+
+```bash
+vercel deploy          # api/index.py + vercel.json + requirements.txt are in the repo
+```
+
+Set these in the Vercel dashboard. The first four are defaulted in
+[`api/index.py`](api/index.py) so a deploy works without touching anything,
+but an explicit value always wins:
+
+| Variable | Value | Why |
+|---|---|---|
+| `WEAVE_BACKEND` | `embedded` | There is no graph server in a serverless function |
+| `WEAVE_DB_PATH` | `/tmp/weave.db` | Everything outside `/tmp` is read-only |
+| `WEAVE_EMBEDDINGS` | `off` | Otherwise a ~30MB model downloads on every cold start |
+| `HF_HOME` | `/tmp/hf` | Backstop for anything that still reaches for the model cache |
+| `WEAVE_ACCESS_TOKEN` | *(random string)* | **Set this.** Empty means no authentication, which is right for loopback and wrong for a public URL |
+| `ANTHROPIC_API_KEY` | *(optional)* | Real generated answers instead of templates |
+| `HYDRA_DB_API_KEY` | *(optional)* | Activates the HydraDB sidecar |
+
+Do **not** set `WEAVE_HYDRA_*`; those configure the Bolt backend, which is not
+used in a Vercel deployment.
+
+> **`/tmp` is ephemeral and per-instance.** Every cold start begins with an
+> empty graph, and two concurrent requests may reach different instances
+> holding different data. For a demo that is usually fine — the flow is *click
+> **Load demo memory**, ask questions* — but ingested sessions do not survive,
+> so this is a showcase deployment rather than a persistent service.
+>
+> For real persistence use `WEAVE_BACKEND=hydra` against a hosted Bolt server
+> (Neo4j Aura has a free tier) with `WEAVE_HYDRA_URI` and `WEAVE_HYDRA_TOKEN`.
+> That backend passes the identical test suite — see [Graph backends](#graph-backends).
+
+[`.vercelignore`](.vercelignore) keeps the function bundle at ~1.4MB by
+excluding `data/` — the benchmark corpora are gitignored but still visible to
+the CLI when deploying from a working copy, and they are ~283MB.
+
 ## Configuration
 
 Copy `.env.example` to `.env`. Everything has a working default; the settings

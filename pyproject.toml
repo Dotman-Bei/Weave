@@ -43,6 +43,15 @@ all = [
 [project.scripts]
 weave = "weave.cli:main"
 
+# Vercel's FastAPI detection. Deliberately `api.index:app` and *not*
+# `weave.api:app`: api/index.py sets the four settings a serverless deployment
+# cannot work without (a writable /tmp database path, embeddings off, and a
+# writable model cache) before importing the app. Pointing Vercel straight at
+# weave.api would skip that and fail at request time with a read-only
+# filesystem error that does not name its cause.
+[tool.vercel]
+entrypoint = "api.index:app"
+
 [tool.setuptools.packages.find]
 include = ["weave*", "benchmarks*"]
 
