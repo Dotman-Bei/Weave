@@ -38,6 +38,7 @@ from .procedural import PathChoice, ProceduralLearningService
 # common word cannot pull the whole haystack into scoring.
 _TOKEN_CANDIDATES = 60
 
+
 # Sidecar hits that make the local scan redundant. Below this the index either
 # is not populated or did not understand the question, so the scan still runs.
 _SIDECAR_SUFFICIENT = 5
@@ -48,10 +49,13 @@ _SIDECAR_SUFFICIENT = 5
 _VECTOR_CANDIDATES = 40
 
 # Grounding below which the episodic layer is consulted even though the routed
-# path was semantic. Raised from 0.34 because a distilled fact can look like a
-# decent match on a stem collision alone, and that false confidence kept the
-# raw conversation out of reach. High enough to catch it, low enough to leave a
-# genuinely strong fact match alone.
+# path was semantic. Now ``Settings.widen_below`` (WEAVE_WIDEN_BELOW) so the
+# value can be measured rather than asserted; this constant is the pre-
+# measurement default, kept for reference. It was raised from 0.34 to 0.6
+# because a distilled fact can look like a decent match on a stem collision
+# alone, and that false confidence kept the raw conversation out of reach --
+# the same reasoning taken to its conclusion is why the shipped default is now
+# 1.0, i.e. always consult the raw layer.
 _WIDEN_BELOW = 0.6
 
 # Share of the query's weighted content that the retrieved subgraph must not
@@ -606,7 +610,11 @@ class RetrievalService:
             # confidence was enough to keep the raw conversation out of reach,
             # even though the sentence answering the question was sitting two
             # nearest neighbours away.
-            if best < _WIDEN_BELOW and may_widen and "episodic" not in result.layers_touched:
+            if (
+                best < self.settings.widen_below
+                and may_widen
+                and "episodic" not in result.layers_touched
+            ):
                 widened = self._episodic(
                     tx,
                     [n.id for n in entity_nodes],

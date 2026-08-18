@@ -1,0 +1,106 @@
+{
+  "dataset_source": "local:longmemeval-s.json",
+  "budget_tokens": 600,
+  "configs": {
+    "full-context": {
+      "config": "full-context",
+      "description": "the entire haystack -- upper bound on recall, and on cost",
+      "total": 100,
+      "context_recall": {
+        "rate": 0.9787,
+        "hits": 92,
+        "graded": 94
+      },
+      "context_recall_when_attempted": {
+        "rate": 0.9787,
+        "hits": 92,
+        "graded": 94,
+        "abstained_on_answerable": 0
+      },
+      "tokens": {
+        "avg_context_tokens": 103174.2,
+        "avg_haystack_tokens": 103144.0,
+        "reduction_x": 1.0
+      },
+      "latency_ms": {
+        "mean": 0.04,
+        "median": 0.0
+      }
+    },
+    "recency": {
+      "config": "recency",
+      "description": "most recent turns until the budget is spent (truncating window)",
+      "total": 100,
+      "context_recall": {
+        "rate": 0.0319,
+        "hits": 3,
+        "graded": 94
+      },
+      "context_recall_when_attempted": {
+        "rate": 0.0319,
+        "hits": 3,
+        "graded": 94,
+        "abstained_on_answerable": 0
+      },
+      "tokens": {
+        "avg_context_tokens": 600.3,
+        "avg_haystack_tokens": 103144.0,
+        "reduction_x": 171.8
+      },
+      "latency_ms": {
+        "mean": 91.11,
+        "median": 89.0
+      }
+    },
+    "lexical-topk": {
+      "config": "lexical-topk",
+      "description": "IDF-weighted keyword retrieval over raw turns, no graph",
+      "total": 100,
+      "context_recall": {
+        "rate": 0.8191,
+        "hits": 77,
+        "graded": 94
+      },
+      "context_recall_when_attempted": {
+        "rate": 0.8191,
+        "hits": 77,
+        "graded": 94,
+        "abstained_on_answerable": 0
+      },
+      "tokens": {
+        "avg_context_tokens": 596.4,
+        "avg_haystack_tokens": 103144.0,
+        "reduction_x": 172.9
+      },
+      "latency_ms": {
+        "mean": 178.85,
+        "median": 181.0
+      }
+    },
+    "weave": {
+      "config": "weave",
+      "description": "the full three-layer system",
+      "total": 100,
+      "context_recall": {
+        "rate": 0.1809,
+        "hits": 17,
+        "graded": 94
+      },
+      "context_recall_when_attempted": {
+        "rate": 0.2656,
+        "hits": 17,
+        "graded": 64,
+        "abstained_on_answerable": 30
+      },
+      "tokens": {
+        "avg_context_tokens": 347.0,
+        "avg_haystack_tokens": 103144.0,
+        "reduction_x": 297.2
+      },
+      "latency_ms": {
+        "mean": 18011.91,
+        "median": 17280.0
+      }
+    }
+  }
+}

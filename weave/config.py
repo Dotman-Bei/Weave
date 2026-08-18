@@ -149,6 +149,13 @@ class Settings:
     abstention_threshold: float = field(
         default_factory=lambda: _env_float("WEAVE_ABSTENTION_THRESHOLD", 0.3)
     )
+    # Grounding below which the episodic layer is consulted even though the
+    # routed path was semantic. At 1.0 the raw conversation is *always*
+    # consulted, which is the measured default: a distilled fact's own score is
+    # not trustworthy evidence that the raw turn behind it is unnecessary.
+    widen_below: float = field(
+        default_factory=lambda: _env_float("WEAVE_WIDEN_BELOW", 1.0)
+    )
     max_context_tokens: int = field(
         default_factory=lambda: _env_int("WEAVE_MAX_CONTEXT_TOKENS", 6000)
     )

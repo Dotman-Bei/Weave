@@ -15,6 +15,7 @@ from benchmarks.baselines import (
     retrieve_recency,
 )
 from benchmarks.dataset import BenchmarkSample
+from benchmarks.longmemeval import _overlaps
 
 
 def _sample(**overrides) -> BenchmarkSample:
@@ -136,3 +137,53 @@ def test_baselines_never_abstain():
     assert payload["context_recall"]["rate"] == 0.5
     assert payload["context_recall_when_attempted"]["rate"] == 0.5
     assert payload["context_recall_when_attempted"]["abstained_on_answerable"] == 0
+
+
+# ---------------------------------------------------------------------------
+# The recall probe itself
+# ---------------------------------------------------------------------------
+
+
+def test_probe_matches_a_gold_sentence_stored_on_its_own_line():
+    """Sentence-granular storage must not be scored as a retrieval miss.
+
+    Weave stores one utterance per sentence and renders each on its own line,
+    so a probe taken from the start of a multi-sentence gold turn spans a
+    boundary that cannot exist in the context. The right sentence being present
+    is what the metric is supposed to detect.
+    """
+    gold = (
+        "I adopted a tortoise called Marbles. "
+        "She is about forty years old and eats dandelions."
+    )
+    context = (
+        "- [session 2023-05-20] user: she is about forty years old and eats "
+        "dandelions."
+    )
+
+    assert _overlaps(gold, context)
+
+
+def test_probe_still_rejects_a_context_without_the_evidence():
+    gold = (
+        "I adopted a tortoise called Marbles. "
+        "She is about forty years old and eats dandelions."
+    )
+    context = "- [session 2023-05-20] user: the build is slow again today."
+
+    assert not _overlaps(gold, context)
+
+
+def test_probe_ignores_sentences_too_short_to_be_evidence():
+    """A bare acknowledgement must not count as having found the evidence."""
+    gold = "Yes. I adopted a tortoise called Marbles last spring in Denver."
+    context = "- [session 2023-05-20] assistant: yes. that sounds lovely."
+
+    assert not _overlaps(gold, context)
+
+
+def test_probe_falls_back_to_whole_match_for_a_single_short_turn():
+    gold = "I live in Berlin."
+    context = "- [session 1] user: i live in berlin."
+
+    assert _overlaps(gold, context)

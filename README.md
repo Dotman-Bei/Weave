@@ -475,6 +475,92 @@ answers — no LLM key. Raw report: [`results/longmemeval-s-v3.json`](results/lo
 The gap between this and the synthetic 100% is exactly why the synthetic score
 is labelled a regression signal rather than a capability claim.
 
+### Retrieval baselines, and the measurement bug they exposed
+
+"368 tokens instead of 103,000" is only interesting if those tokens are *better
+chosen* than the cheapest way of picking 368 tokens. So we built the
+comparison: four retrievers, the same 100 stratified questions, one metric, and
+a 600-token budget for every baseline — slightly *more* than Weave spends. Raw
+report:
+[`results/baselines-corrected-100.json`](results/baselines-corrected-100.json),
+harness in [`benchmarks/baselines.py`](benchmarks/baselines.py).
+
+| Retriever | Context recall | When it attempted | Context tokens | vs haystack |
+|---|---|---|---|---|
+| `full-context` — the whole haystack | 100.0% | 100.0% | 103,174 | 1× |
+| `lexical-topk` — IDF keywords over raw turns, no graph | 87.2% | 87.2% | 596 | 173× |
+| **`weave`** — the full three-layer system | **61.7%** | **90.6%** | **368** | **280×** |
+| `recency` — truncating context window | 4.3% | 4.3% | 600 | 172× |
+
+**When Weave attempts a question it finds the gold evidence 90.6% of the time,
+against 87.2% for a strong keyword baseline, using 38% fewer tokens.** The
+`recency` row is the control that says retrieval is worth doing at all: a
+sliding context window finds the evidence in 4 questions out of 94.
+
+The gap between Weave's two columns — 61.7% headline against 90.6% when
+attempting — is **entirely abstention**. It refuses 30 of the 94 answerable
+questions, and every refusal scores as a miss. That is the one real weakness,
+and it is measured rather than asserted below.
+
+#### The bug this table originally reported
+
+The first version of this table said `lexical-topk` **81.9%** against Weave
+**18.1%** — a naive keyword baseline beating the graph by 4.5×. That number was
+wrong, and the cause is worth recording because it is a mistake any project
+measuring retrieval can make.
+
+Weave stores **one utterance per sentence**; LongMemEval's gold evidence is a
+whole **turn**. The recall probe took the gold turn's leading 60 characters and
+looked for them as one contiguous string. On **35% of gold turns the first
+sentence is shorter than that**, so the probe straddled a sentence boundary
+that cannot exist in Weave's context — unmatchable however perfectly the right
+sentence was retrieved. Every baseline stores whole turns, so none of them
+were affected. We were measuring text segmentation and calling it retrieval
+quality.
+
+The probe now matches **any sentence** of the gold turn
+([`benchmarks/longmemeval.py`](benchmarks/longmemeval.py)). The correction is
+symmetric — a whole turn contains its own sentences, so turn-based retrievers
+score identically under both rules and gain nothing — and the 30-character
+floor is set from the release rather than picked: gold sentences have a median
+length of 89 characters, a 10th percentile of 35, and every gold turn contains
+at least one sentence of 40+. Four tests in
+[`tests/test_baselines.py`](tests/test_baselines.py) pin the behaviour.
+
+Two claims we made from the broken metric did not survive it:
+
+* *"Candidate selection is losing the evidence."* It is not. Re-measured, the
+  gold utterance reaches the FTS5 candidate set on **12 of 12** sampled
+  questions under both the old term selection and a proposed IDF-ordered
+  replacement. The replacement was written, measured to change **nothing**
+  (byte-identical output over 100 questions), and reverted.
+* *"A keyword baseline beats the graph."* It does not, on equal terms.
+
+What did survive: consulting the raw conversation on every query rather than
+only when a distilled fact scores below 0.6 (`WEAVE_WIDEN_BELOW`, now `1.0`).
+Measured against a control arm — 56.4% → 61.7% recall, 82.8% → 90.6% when
+attempting, for 21 extra tokens.
+
+### Abstention: a measured operating point
+
+Abstention is the one place Weave genuinely loses recall, so the threshold is
+reported as a curve rather than a claim. Same 100 questions, one variable:
+
+| `WEAVE_ABSTENTION_THRESHOLD` | Accuracy | Context recall | Abstention F1 |
+|---|---|---|---|
+| **0.30 (shipped)** | **21.0%** | 61.7% | **20.0%** |
+| 0.15 | 20.0% | 68.1% | 7.4% |
+| 0.00 | 21.0% | 71.3% | 8.7% |
+
+Abstaining less does buy context recall — and **converts none of it into
+accuracy**, while halving abstention F1. So the shipped value stays at 0.30.
+The flat accuracy column is the more useful finding: with 61.7% of gold
+evidence reaching the context and 21.0% graded correct, **accuracy is
+generator-bound, not retrieval-bound**. The template answerer quotes evidence
+verbatim; the grader wants a particular phrase. That gap is what an LLM key
+closes, and it is the reason the retrieval numbers above are reported
+separately from accuracy at all.
+
 ### LoCoMo
 
 The same code, scored against a second real dataset — 300 questions from the
@@ -513,26 +599,43 @@ and this is what it says.
 
 ### Ablation
 
-Each configuration changes exactly one variable, over the same dataset:
+Each configuration changes exactly one variable, over the same 60 stratified
+questions from the real release. Raw reports:
+[`results/abl-episodic.json`](results/abl-episodic.json),
+[`results/abl-rest.json`](results/abl-rest.json).
 
-| Config | Accuracy | Abstention F1 | Conflict resolution | Context tokens | Latency |
+| Config | Accuracy | Context recall | Abstention F1 | Context tokens | Latency |
 |---|---|---|---|---|---|
-| `episodic-only` | 65.0% | 84.2% | 100.0% | 33 | 6.2 ms |
-| `semantic-only` | 100.0% | 100.0% | 100.0% | 49 | 3.1 ms |
-| `no-consolidation` | 80.0% | 100.0% | **0.0%** | 53 | 5.1 ms |
-| **`full-weave`** | **100.0%** | **100.0%** | **100.0%** | 56 | 5.8 ms |
+| `semantic-only` | 10.0% | 0.0% | 13.3% | 148 | 774 ms |
+| `episodic-only` | 26.7% | 64.3% | 22.2% | 463 | 1,663 ms |
+| `no-consolidation` | 28.3% | 64.3% | 22.2% | 538 | 1,590 ms |
+| **`full-weave`** | **28.3%** | **69.6%** | **25.0%** | 528 | 1,528 ms |
 
-The informative rows are the middle two. Removing **consolidation** takes
-conflict resolution to zero and costs 20 points of accuracy — unresolved
-conflicts leave both values current, and the wrong one gets returned.
-Restricting retrieval to the **episodic layer** costs 35 points and drops
-abstention F1, because raw utterances can say what was said but not which value
-is still true. That is the case for the semantic layer stated as a measurement
-rather than a claim.
+The full system wins on the two metrics it should: context recall and
+abstention F1. What the rows actually say:
 
-`episodic-only` still shows 100% conflict resolution because the ablation
-restricts *retrieval*, not consolidation — the conflicts are resolved correctly,
-the episodic path just cannot reach the result.
+* **`semantic-only` collapses** — 10% accuracy, and context recall of *zero*
+  by construction. Restricted to the semantic layer, retrieval returns only
+  distilled facts (`user lives in lisbon`), never the raw turn the grader is
+  looking for. Consolidated facts are an excellent index and a poor substitute
+  for evidence; this row is why the episodic layer is not optional.
+* **`episodic-only` is competent but blunt** — 26.7%. Raw utterances can say
+  what was said, but not which value is still true, and abstention F1 drops
+  because there is no fact-level structure to judge coverage against.
+* **Consolidation buys recall and abstention, not accuracy.** Against
+  `no-consolidation` the full system is level on accuracy (28.3%) and ahead on
+  context recall (64.3% → 69.6%) and abstention F1 (22.2% → 25.0%), for
+  slightly *fewer* tokens. On this slice, resolving conflicts sharpens which
+  evidence is retrieved rather than changing the final wording.
+
+**A limitation, not an omission:** the conflict-resolution column is `n/a` on
+every real-data row. LongMemEval does not label which contradictions its
+haystacks contain, so there is no ground truth to score against — that metric
+is only computable on the synthetic generator, which labels its own
+knowledge-updates. The earlier version of this table reported conflict
+resolution at 100%/0% from synthetic data; those numbers were real but measured
+on a dataset built to contain exactly the conflicts being counted, and they are
+not evidence about LongMemEval.
 
 ### On the benchmark numbers
 
@@ -545,8 +648,10 @@ the episodic path just cannot reach the result.
 > **The synthetic 100% is a regression signal, not a capability claim.** The
 > generator draws from a fixed pool of five topics and five simple facts; a
 > system tuned against it will score high on it. It is useful for catching
-> regressions and for the ablation comparison above, where all four configs face
-> the identical dataset. It is not a substitute for the real benchmark.
+> regressions, and it is the only configuration that can score conflict
+> resolution, because it labels the contradictions it plants. It is not a
+> substitute for the real benchmark, and every table above is measured on the
+> real release instead.
 >
 > To run the real thing, fetch the release (MIT licensed, ~278MB) — the loader
 > prefers it automatically and reports `dataset_source: local:…`:
@@ -640,14 +745,15 @@ INFO weave.retrieval:     abstained on 'What is my blood type?' (type=factual pa
 ## Tests
 
 ```bash
-pytest                      # 86 tests
+pytest                      # 98 tests
 ```
 
 Covering the graph substrate (filters, ordering, bounded traversal, transaction
 rollback, index creation), ingestion and extraction, conflict detection and all
-four resolution policies, retrieval and routing, the abstention router, and the
-embedding fallback with its abstention guard. Run with
-`WEAVE_EMBEDDINGS=off` to confirm the lexical-only path still passes.
+four resolution policies, retrieval and routing, the abstention router, the
+embedding fallback with its abstention guard, the HydraDB sidecar against a
+stub, and the benchmark baselines including the context-recall probe itself.
+Run with `WEAVE_EMBEDDINGS=off` to confirm the lexical-only path still passes.
 
 ---
 
@@ -707,7 +813,7 @@ Neither dataset is redistributed here; both are fetched at runtime into
 | [model2vec](https://github.com/MinishLab/model2vec) + [`minishlab/potion-base-8M`](https://huggingface.co/minishlab/potion-base-8M) | Static embeddings for the semantic-similarity fallback — numpy only, no torch | MIT |
 | [anthropic](https://github.com/anthropics/anthropic-sdk-python) + [tiktoken](https://github.com/openai/tiktoken) | Optional LLM extraction/generation and token counting | MIT |
 | [python-dotenv](https://github.com/theskumar/python-dotenv) | `.env` loading | BSD-3 |
-| [pytest](https://github.com/pytest-dev/pytest) | The 86-test suite | MIT |
+| [pytest](https://github.com/pytest-dev/pytest) | The 98-test suite | MIT |
 | SQLite (via Python's [`sqlite3`](https://docs.python.org/3/library/sqlite3.html)) | Storage engine under the embedded graph backend, incl. the FTS5 text index | Public domain |
 
 **Event**

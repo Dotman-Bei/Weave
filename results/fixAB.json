@@ -1,0 +1,31 @@
+{
+  "dataset_source": "local:longmemeval-s.json",
+  "budget_tokens": 600,
+  "configs": {
+    "weave": {
+      "config": "weave",
+      "description": "the full three-layer system",
+      "total": 100,
+      "context_recall": {
+        "rate": 0.1915,
+        "hits": 18,
+        "graded": 94
+      },
+      "context_recall_when_attempted": {
+        "rate": 0.2812,
+        "hits": 18,
+        "graded": 64,
+        "abstained_on_answerable": 30
+      },
+      "tokens": {
+        "avg_context_tokens": 368.0,
+        "avg_haystack_tokens": 103144.0,
+        "reduction_x": 280.3
+      },
+      "latency_ms": {
+        "mean": 18691.68,
+        "median": 18091.5
+      }
+    }
+  }
+}
