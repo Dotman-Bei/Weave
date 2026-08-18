@@ -9,6 +9,7 @@ keeps its node and evidence, gains a ``valid_until``, and is pointed at by a
 
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -17,6 +18,8 @@ from ..config import Settings, get_settings
 from ..graph import schema as S
 from ..graph.store import GraphStore, Node, Tx
 from ..util import dedupe, now_iso, parse_iso
+
+log = logging.getLogger("weave.consolidation")
 
 POLICIES = ("recency", "frequency", "confidence", "trust")
 
@@ -99,6 +102,19 @@ class ConsolidationService:
             result.duplicates_merged = self._merge_duplicates(tx)
 
         result.latency_ms = int((time.perf_counter() - started) * 1000)
+        # The sleep cycle mutates what every later query treats as true, so it
+        # says what it changed and under which policy -- an unexplained answer
+        # is usually explained here.
+        log.info(
+            "sleep cycle (%s): examined %d, resolved %d, superseded %d, "
+            "merged %d duplicate(s) in %d ms",
+            policy,
+            result.conflicts_examined,
+            result.conflicts_resolved,
+            result.facts_superseded,
+            result.duplicates_merged,
+            result.latency_ms,
+        )
         return result
 
     # -- internals ---------------------------------------------------------

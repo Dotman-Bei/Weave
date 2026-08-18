@@ -57,9 +57,9 @@ under an explicit policy and leaves a `SUPERSEDES` edge. The old fact keeps its
 node, its evidence and its `valid_until` stamp.
 
 ```
-$ weave query "Where do I live?"        →  User lives in lisbon. [sess-06]
-$ weave query "Where did I live before?" →  In session 1 (2025-01-14), user said:
-                                            "I live in Berlin, so most of my syncs run overnight CET."
+$ weave query "Where do I live?"         →  User lives in lisbon. [sess-06]
+$ weave query "Where did I live before?" →  User lives in lisbon. Previously: berlin.
+                                            [sess-06, sess-01]
 ```
 
 **Cross-session synthesis.** Facts stated in session 2 and session 7 are merged
@@ -80,6 +80,91 @@ miss, Weave returns "I don't know" with `tokens_used = 0`.
 disliking coffee. Predicates are classified as functional (`prefers_language`,
 `lives_in_city` — one value at a time) or not (`uses_tool`, `likes_beverage` —
 they accumulate), and only functional ones can conflict.
+
+---
+
+## Why a graph, and not a vector store
+
+Every query below is one a vector index cannot answer correctly, no matter how
+good the embedding is. They are not hard because the text is hard to match —
+they are hard because the answer is a property of the *relationships between*
+memories, not of any single memory's content.
+
+| Question | What it needs | Why similarity search fails |
+|---|---|---|
+| *"Where did I live before?"* | Walk `SUPERSEDES` backwards from the current fact | The old value is the one the question does **not** name. Nearest-neighbour ranks the *current* fact top — the superseded one is a worse lexical and semantic match to the question by construction. |
+| *"What database do I use?"* (stated in s2 **and** s7) | Collect every `Fact` on one `(subject, predicate)` slot, across sessions | Top-k returns the k nearest chunks, which are usually k restatements of the *same* session. There is no operator for "one hop out from every fact sharing this slot". |
+| *"Do I still prefer Python?"* | Read `Conflict.status` and `valid_until` on the edge | Both statements are in the index, both match well, and neither carries the fact that one **replaced** the other. A vector store returns the contradiction without resolving it. |
+| *"What is my blood type?"* (never discussed) | Measure coverage of the query over the retrieved subgraph | Cosine similarity always returns *something*. There is no null. A vector store's top hit against an unheard-of question is a confident, wrong neighbour — which is exactly how memory layers hallucinate. |
+
+The shared shape: **vectors rank memories by resemblance to the question, and
+all four answers depend on structure that resemblance cannot see** — which fact
+replaced which, which slot they compete for, which are still valid, and whether
+anything relevant exists at all.
+
+Weave still uses embeddings — see [Semantic fallback](#semantic-fallback-and-its-cost).
+They are how it finds *candidates* when wording differs (*"what colour do I like
+best?"* against a stored `favorite_color`). They are added to lexical scoring,
+never used as the retrieval substrate. Similarity picks what to look at; the
+graph decides what is true.
+
+### What breaks without the graph
+
+Without a graph substrate, the three-layer architecture does not degrade — it
+collapses into a pile of application code. Concretely, reproducing
+`weave query "Where did I live before?"` on Postgres plus a vector index means:
+
+1. A vector search for candidate utterances (**one service**), then
+2. `facts JOIN entities JOIN fact_sources JOIN sessions` to hydrate provenance
+   (**4 JOINs**), then
+3. A recursive CTE over the supersession chain to find what the current fact
+   replaced — self-joining `facts` against itself on `(subject, predicate)`
+   with a `valid_until` window (**recursive self-join, hand-written**), then
+4. A second pass to check `conflicts.status` for anything unresolved touching
+   those fact ids (**one more JOIN**), then
+5. Application code to reconcile the vector store's ranking with the SQL
+   result set, because **the two systems have no shared identity** — and
+   keeping them from drifting apart on every write is its own ongoing problem.
+
+That is two datastores, five-plus JOINs, a recursive CTE, and a consistency
+problem you now own forever. In Weave it is one bounded traversal against one
+store: match the entity, expand `HAS_FACT`, follow `SUPERSEDES`, filter on
+`valid_until`. The procedural layer makes this worse for the SQL version, not
+better — `BEST_PATH_FOR` / `TRIED` / `SUCCEEDED` is a graph of retrieval
+strategies whose whole purpose is to be traversed and updated per query.
+
+The honest counter-argument: at this corpus size SQLite would be *fast* enough
+for all of it. The claim is not that a graph is faster. It is that the queries
+above are one traversal each instead of a bespoke join plan each, and that the
+supersession chain and the conflict graph are the data model rather than
+something layered on top of it.
+
+### Why object-store backing matters here
+
+Track 3's shape is the argument for it: **115K tokens of history per question,
+of which a query touches ~520** (measured — see [Benchmarks](#benchmarks)).
+That is a 198:1 ratio between what must be *retained* and what is ever *read*,
+and it splits cleanly along the layer boundary:
+
+| Layer | Size | Access pattern | Wants |
+|---|---|---|---|
+| **Episodic** — raw turns, immutable | ~99% of bytes | Written once, read rarely, never updated | Cheap capacity. S3-class object storage. |
+| **Semantic** — facts, conflicts, validity | ~1% of bytes | Read on every query, rewritten by every consolidation | Low latency. Memory/SSD-class. |
+
+Episodic memory is append-only by design — an utterance is never edited, only
+cited — which is precisely the workload object storage is good at, and the
+reason HydraDB's S3-backed durability is a fit rather than a compromise. Keeping
+30–40 sessions per user in a hot store priced for the semantic layer means
+paying working-set rates for an archive that is read on maybe one query in a
+hundred. Splitting them is what makes per-user retention economically boring
+instead of a scaling ceiling.
+
+**Status: architecturally supported, not yet exercised.** The layer split exists
+in the schema and the retrieval paths already address the layers separately, so
+the cold/hot boundary falls where it should. Weave does not currently drive a
+tiered store — the embedded backend is one SQLite file and the sidecar holds a
+full copy of the episodic text. Reporting this as shipped would be a claim the
+code does not support.
 
 ---
 
@@ -288,6 +373,22 @@ category so unrelated facts never collide.
 
 Interactive reference at `/docs`.
 
+`GET /health` reports the graph backend, the per-layer node counts, and the
+HydraDB sidecar's state — including *why* it is off, since "disabled",
+"no API key" and "SDK not installed" are three different problems:
+
+```json
+{
+  "status": "ok",
+  "hydra_sidecar": {
+    "state": "off",
+    "reason": "no API key (set HYDRA_DB_API_KEY)",
+    "sdk_installed": true,
+    "role": "episodic text index; the graph remains the source of truth"
+  }
+}
+```
+
 ```bash
 curl -s localhost:8000/query -H 'content-type: application/json' \
   -d '{"query":"What is my favorite color?"}' | jq '.answer, .abstained, .retrieval_path'
@@ -322,47 +423,93 @@ python -m benchmarks.locomo                 # needs the LoCoMo release, see belo
 
 Run over the **full 500-question `longmemeval_s`** release (~103k tokens of
 haystack per question), embedded backend, rule-based extraction, template
-answers — no LLM key:
+answers — no LLM key. Raw report: [`results/longmemeval-s-v3.json`](results/longmemeval-s-v3.json).
 
 | Metric | Value |
 |---|---|
-| Accuracy | **19.6%** (98/500) |
-| Context recall | **33.2%** (156/470) |
-| Abstention F1 | **7.0%** (precision 5.4%, recall 10.0%) |
-| Context tokens | 520 vs 103,156 full-context (**198×** smaller) |
-| Latency | mean 1,181 ms · median 1,176 ms |
+| Accuracy | **20.0%** (100/500) |
+| Context recall | **21.5%** (101/470) |
+| Abstention F1 | **14.3%** (precision 8.4%, recall 46.7%) |
+| Context tokens | 532 vs 103,156 full-context (**194×** smaller) |
+| Latency | mean 1,404 ms · median 1,342 ms |
 
 | Category | Accuracy | |
 |---|---|---|
 | `single-session-user` | 45.7% | 32/70 |
-| `knowledge-update` | 26.9% | 21/78 |
+| `knowledge-update` | 25.6% | 20/78 |
 | `multi-session` | 18.8% | 25/133 |
+| `temporal-reasoning` | 12.8% | 17/133 |
 | `single-session-assistant` | 10.7% | 6/56 |
-| `temporal-reasoning` | 10.5% | 14/133 |
 | `single-session-preference` | 0.0% | 0/30 |
 
-**Read this honestly.** Three things it says:
+**Read this honestly.** Four things it says:
 
-1. **Retrieval outruns generation.** Context recall (33.2%) is ~70% higher than
-   accuracy (19.6%): in one question in seven, Weave puts the gold answer in
-   the context and then fails to say it. The template generator quotes evidence
-   verbatim — asked where a coupon was redeemed, it returned the right sentence
-   while the expected answer was the store's name. That gap is what an LLM
-   closes, and accuracy here is substring containment, stricter than
-   LongMemEval's official GPT-4 judge.
+1. **Retrieval is the bottleneck, and it is worse than an earlier version of
+   this table claimed.** Context recall sits at 21.5% against 20.0% accuracy —
+   the two are nearly equal, which means the generator is *not* where most of
+   the loss is. Weave simply fails to put the gold evidence in the context on
+   about four questions in five. An earlier revision reported 33.2% recall;
+   that number was measured by looking for the *answer string* in the context,
+   which credits a coincidental match. It is now measured against the dataset's
+   own `answer_session_ids` gold turns, which is stricter and correct. The
+   metric got more honest, not the system worse.
 
-2. **The abstention router does not generalise.** 100% F1 on synthetic, **7% on
-   real data** — it abstains on ~55 questions and is right about 3 of them,
-   while missing 27 of the 30 genuinely unanswerable ones. The synthetic
+2. **The abstention router does not generalise.** 100% F1 on synthetic, **14.3%
+   on real data.** It now catches 14 of the 30 genuinely unanswerable questions
+   (recall 46.7%, up from 10.0% once uncovered query terms were weighted) but
+   pays for it by abstaining on 166 questions to find them — precision 8.4%. It
+   is trading false answers for false silences at roughly 11:1. The synthetic
    unanswerables were topically adjacent but lexically distinct, which is a much
-   easier problem than LongMemEval's. This is the single largest gap between
-   what this system claims and what it does.
+   easier problem than LongMemEval's. **This remains the single largest gap
+   between what this system claims and what it does.**
 
-3. **The token reduction is real.** 198× less context than stuffing the
-   haystack, on data nobody tuned against.
+3. **`single-session-preference` is a zero, and it is a real one.** 0/30. The
+   template answerer emits `User prefers X` where the grader wants a free-text
+   phrase, and preference questions are exactly where a verbatim quote is least
+   likely to contain the graded substring.
+
+4. **The token reduction is real.** 194× less context than stuffing the
+   haystack, on data nobody tuned against. This is the one headline number that
+   holds up without qualification.
 
 The gap between this and the synthetic 100% is exactly why the synthetic score
 is labelled a regression signal rather than a capability claim.
+
+### LoCoMo
+
+The same code, scored against a second real dataset — 300 questions from the
+[LoCoMo](https://github.com/snap-research/locomo) release. Raw report:
+[`results/locomo-300.json`](results/locomo-300.json).
+
+| Metric | Value |
+|---|---|
+| Accuracy | **11.7%** (35/300) |
+| Context recall | **3.9%** (9/233) |
+| Abstention F1 | **27.8%** (precision 19.9%, recall 46.3%) |
+| Context tokens | 277 vs 12,086 full-context (**43.6×** smaller) |
+| Latency | mean 245 ms · median 246 ms |
+
+| Category | Accuracy | |
+|---|---|---|
+| `adversarial` | 46.3% | 31/67 |
+| `single-hop` | 3.5% | 4/114 |
+| `multi-hop` | 0.0% | 0/43 |
+| `temporal-reasoning` | 0.0% | 0/63 |
+| `open-domain` | 0.0% | 0/13 |
+
+**This is the weakest result in the project, and it is instructive.** Every
+point comes from the `adversarial` category — LoCoMo's unanswerable questions,
+where abstaining *is* the correct answer. On everything requiring an actual
+retrieved fact, Weave scores near zero, and context recall of 3.9% says why:
+the evidence almost never reaches the context.
+
+The cause is a shape mismatch, not a bug. LoCoMo is multi-speaker dialogue
+between two named people; Weave's extractor is built around a single `user`
+subject and attributes facts to them. Facts about *the other speaker* are
+either dropped or misattributed, so the semantic layer ends up sparse and
+wrong-subjected, and the retrieval paths have little to find. Reporting it
+anyway is the point: the harness runs a second real dataset by identical code,
+and this is what it says.
 
 ### Ablation
 
@@ -475,10 +622,25 @@ changed to Go?"), trading one coincidental answer for three false abstentions.
 The case is kept as an `xfail` in `tests/test_embeddings.py` so it stays
 visible.
 
+## Observability
+
+Ingestion, consolidation and abstention each log one line, so a surprising
+answer can be traced without a debugger. Abstentions log at `INFO` with the
+deciding reasons attached, because that is the decision most likely to be
+questioned; ordinary answers log at `DEBUG`.
+
+```
+$ python -c "import logging; logging.basicConfig(level=logging.INFO); ..."
+INFO weave.ingestion:     ingested s1: 2 turns, 2 facts (+0 reinforced), 3 entities, 0 conflict(s) in 1093 ms via rule-based
+INFO weave.ingestion:     ingested s2: 2 turns, 2 facts (+0 reinforced), 2 entities, 2 conflict(s) in 12 ms via rule-based
+INFO weave.consolidation: sleep cycle (recency): examined 2, resolved 2, superseded 2, merged 0 duplicate(s) in 3 ms
+INFO weave.retrieval:     abstained on 'What is my blood type?' (type=factual path=semantic-only score=-0.20 < 0.30): Nothing stored matches the subject of the question
+```
+
 ## Tests
 
 ```bash
-pytest                      # 62 tests
+pytest                      # 86 tests
 ```
 
 Covering the graph substrate (filters, ordering, bounded traversal, transaction
@@ -497,11 +659,11 @@ weave/
   models/         episodic.py · semantic.py · procedural.py
   services/       ingestion · extraction · consolidation · retrieval · procedural
   prompts/        extraction, classification and answer templates
-  web/            the workspace UI: index.html · globals.css · app.js
-  api.py  cli.py  client.py  db.py  config.py  llm.py  util.py
-benchmarks/       dataset.py · longmemeval.py · ablation.py
+  web/            the workspace UI: index.html · workspace.html · globals.css · app.js
+  api.py  cli.py  client.py  db.py  config.py  llm.py  sidecar.py  embeddings.py  util.py
+benchmarks/       dataset.py · longmemeval.py · locomo.py · ablation.py · baselines.py
 scripts/          setup_hydradb.sh · ingest_sample.py · run_benchmark.py
-tests/            graph · ingestion · conflict · retrieval · abstention
+tests/            graph · ingestion · conflict · retrieval · abstention · embeddings · sidecar
 data/             sample_sessions/
 ```
 
@@ -512,6 +674,52 @@ that matter most are `WEAVE_BACKEND`, `ANTHROPIC_API_KEY`,
 `WEAVE_ABSTENTION_THRESHOLD` (default `0.3`) and `WEAVE_MAX_CONTEXT_TOKENS`
 (default `6000`).
 
+## Team
+
+Solo build by **[Dotman-Bei](https://github.com/Dotman-Bei)** (Emmanuel Bamigboye) —
+graph schema and both backends, the three-layer services, abstention router,
+benchmark harness, and the workspace UI.
+
+## Attribution
+
+Weave is built on other people's work. In full:
+
+**Datasets**
+
+| | Used for | License |
+|---|---|---|
+| [LongMemEval](https://github.com/xiaowu0162/LongMemEval) (Wu et al., 2024) — [`longmemeval_s` release](https://huggingface.co/datasets/xiaowu0162/longmemeval) | The primary benchmark: 500 questions over ~103K-token, 39–66-session haystacks | MIT |
+| [LoCoMo](https://github.com/snap-research/locomo) (Maharana et al., 2024) | Second benchmark, 300 questions, scored by identical code | See upstream repo |
+
+Neither dataset is redistributed here; both are fetched at runtime into
+`data/`, and the harness reports which one produced every number
+(`dataset_source`).
+
+**Libraries**
+
+| | Used for | License |
+|---|---|---|
+| [FastAPI](https://github.com/tiangolo/fastapi) + [Uvicorn](https://github.com/encode/uvicorn) | HTTP API and the OpenAPI reference at `/docs` | MIT / BSD-3 |
+| [Pydantic](https://github.com/pydantic/pydantic) | Request/response models | MIT |
+| [httpx](https://github.com/encode/httpx) | HTTP client for the LLM and sidecar integrations | BSD-3 |
+| [neo4j Python driver](https://github.com/neo4j/neo4j-python-driver) | Bolt transport for the OpenCypher backend | Apache-2.0 |
+| [hydradb-sdk](https://pypi.org/project/hydradb-sdk/) | The HydraDB REST context API, used as the episodic retrieval sidecar | See upstream |
+| [model2vec](https://github.com/MinishLab/model2vec) + [`minishlab/potion-base-8M`](https://huggingface.co/minishlab/potion-base-8M) | Static embeddings for the semantic-similarity fallback — numpy only, no torch | MIT |
+| [anthropic](https://github.com/anthropics/anthropic-sdk-python) + [tiktoken](https://github.com/openai/tiktoken) | Optional LLM extraction/generation and token counting | MIT |
+| [python-dotenv](https://github.com/theskumar/python-dotenv) | `.env` loading | BSD-3 |
+| [pytest](https://github.com/pytest-dev/pytest) | The 86-test suite | MIT |
+| SQLite (via Python's [`sqlite3`](https://docs.python.org/3/library/sqlite3.html)) | Storage engine under the embedded graph backend, incl. the FTS5 text index | Public domain |
+
+**Event**
+
+Built for [Hack Hydra 2026](https://hackhydra.com), Track 3 — Memory & Context
+Retrieval. [HydraDB](https://hydradb.com) is the sponsor database; see
+[HydraDB sidecar](#hydradb-sidecar) for what it does here and
+[Graph backends](#graph-backends) for what it turned out not to be.
+
+No code was copied from another memory system. Mem0 and Zep are referenced in
+this README as points of contrast only.
+
 ## License
 
-MIT.
+MIT — see [LICENSE](LICENSE).

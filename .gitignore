@@ -18,4 +18,7 @@ data/weave.db-shm
 # Benchmark data is downloaded at runtime
 data/longmemeval/
 data/locomo/
-results/
+
+# Benchmark *results* are checked in: the README quotes them, so they have to
+# be verifiable. Only the verbose run logs stay out.
+results/*.log

@@ -8,6 +8,7 @@ no topical overlap with the question, Weave abstains and never spends a token.
 
 from __future__ import annotations
 
+import logging
 import math
 import re
 import time
@@ -27,6 +28,8 @@ from ..util import (
     normalise_spelling,
     truncate,
 )
+
+log = logging.getLogger("weave.retrieval")
 from ..sidecar import get_sidecar
 from .extraction import extract_query_entities
 from .procedural import PathChoice, ProceduralLearningService
@@ -668,6 +671,29 @@ class RetrievalService:
             e.to_dict() for e in result.evidence if e.kind == "fact"
         ][:10]
         result.latency_ms = int((time.perf_counter() - started) * 1000)
+
+        # An abstention is the decision most likely to be questioned, so it
+        # logs at info with the reasons; an ordinary answer logs at debug.
+        if result.abstained:
+            log.info(
+                "abstained on %r (type=%s path=%s score=%.2f < %.2f): %s",
+                truncate(query, 80),
+                result.query_type,
+                result.retrieval_path,
+                decision.score,
+                decision.threshold,
+                "; ".join(decision.reasons) or "no reason recorded",
+            )
+        else:
+            log.debug(
+                "answered %r (type=%s path=%s evidence=%d tokens=%d) in %d ms",
+                truncate(query, 80),
+                result.query_type,
+                result.retrieval_path,
+                len(result.evidence),
+                result.tokens_used,
+                result.latency_ms,
+            )
         return result
 
     # -- routing -----------------------------------------------------------

@@ -20,6 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from .config import get_settings
+from .sidecar import describe_sidecar
 from .db import HydraDBClient, get_store
 from .graph import schema as S
 from .models.episodic import Session
@@ -266,6 +267,7 @@ def health_check() -> dict[str, Any]:
         "graph_alive": alive,
         "config": settings.describe(),
         "llm_configured": settings.has_llm,
+        "hydra_sidecar": describe_sidecar(settings),
         "stats": client.stats(),
     }
 

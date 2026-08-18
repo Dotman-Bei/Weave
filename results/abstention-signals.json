@@ -1,0 +1,962 @@
+[
+ {
+  "id": "0862e8bf_abs",
+  "should_abstain": true,
+  "score": 0.0154,
+  "threshold": 0.3,
+  "uncovered": 0.6154,
+  "gold_in_context": false
+ },
+ {
+  "id": "15745da0_abs",
+  "should_abstain": true,
+  "score": 0.4166,
+  "threshold": 0.3,
+  "uncovered": 0.3149,
+  "gold_in_context": false
+ },
+ {
+  "id": "bc8a6e93_abs",
+  "should_abstain": true,
+  "score": 0.2102,
+  "threshold": 0.3,
+  "uncovered": 0.5442,
+  "gold_in_context": false
+ },
+ {
+  "id": "19b5f2b3_abs",
+  "should_abstain": true,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": false
+ },
+ {
+  "id": "29f2956b_abs",
+  "should_abstain": true,
+  "score": -0.0198,
+  "threshold": 0.3,
+  "uncovered": 0.7614,
+  "gold_in_context": false
+ },
+ {
+  "id": "f4f1d8a4_abs",
+  "should_abstain": true,
+  "score": 0.1818,
+  "threshold": 0.3,
+  "uncovered": 0.5758,
+  "gold_in_context": false
+ },
+ {
+  "id": "88432d0a_abs",
+  "should_abstain": true,
+  "score": 0.5454,
+  "threshold": 0.3,
+  "uncovered": 0.1717,
+  "gold_in_context": false
+ },
+ {
+  "id": "80ec1f4f_abs",
+  "should_abstain": true,
+  "score": 0.1473,
+  "threshold": 0.3,
+  "uncovered": 0.6141,
+  "gold_in_context": false
+ },
+ {
+  "id": "eeda8a6d_abs",
+  "should_abstain": true,
+  "score": 0.2733,
+  "threshold": 0.3,
+  "uncovered": 0.4741,
+  "gold_in_context": false
+ },
+ {
+  "id": "60bf93ed_abs",
+  "should_abstain": true,
+  "score": -0.2882,
+  "threshold": 0.3,
+  "uncovered": 0.7094,
+  "gold_in_context": false
+ },
+ {
+  "id": "edced276_abs",
+  "should_abstain": true,
+  "score": 0.3105,
+  "threshold": 0.3,
+  "uncovered": 0.4328,
+  "gold_in_context": false
+ },
+ {
+  "id": "gpt4_372c3eed_abs",
+  "should_abstain": true,
+  "score": 0.0257,
+  "threshold": 0.3,
+  "uncovered": 0.7492,
+  "gold_in_context": false
+ },
+ {
+  "id": "2311e44b_abs",
+  "should_abstain": true,
+  "score": 0.475,
+  "threshold": 0.3,
+  "uncovered": 0.25,
+  "gold_in_context": false
+ },
+ {
+  "id": "6456829e_abs",
+  "should_abstain": true,
+  "score": 0.3829,
+  "threshold": 0.3,
+  "uncovered": 0.3524,
+  "gold_in_context": false
+ },
+ {
+  "id": "e5ba910e_abs",
+  "should_abstain": true,
+  "score": -0.0392,
+  "threshold": 0.3,
+  "uncovered": 0.8213,
+  "gold_in_context": false
+ },
+ {
+  "id": "a96c20ee_abs",
+  "should_abstain": true,
+  "score": 0.4008,
+  "threshold": 0.3,
+  "uncovered": 0.3325,
+  "gold_in_context": false
+ },
+ {
+  "id": "ba358f49_abs",
+  "should_abstain": true,
+  "score": 0.3814,
+  "threshold": 0.3,
+  "uncovered": 0.3541,
+  "gold_in_context": false
+ },
+ {
+  "id": "09ba9854_abs",
+  "should_abstain": true,
+  "score": 0.5137,
+  "threshold": 0.3,
+  "uncovered": 0.207,
+  "gold_in_context": false
+ },
+ {
+  "id": "gpt4_70e84552_abs",
+  "should_abstain": true,
+  "score": -0.1013,
+  "threshold": 0.3,
+  "uncovered": 0.6,
+  "gold_in_context": false
+ },
+ {
+  "id": "gpt4_93159ced_abs",
+  "should_abstain": true,
+  "score": 0.1709,
+  "threshold": 0.3,
+  "uncovered": 0.4143,
+  "gold_in_context": false
+ },
+ {
+  "id": "982b5123_abs",
+  "should_abstain": true,
+  "score": 0.2996,
+  "threshold": 0.3,
+  "uncovered": 0.4449,
+  "gold_in_context": false
+ },
+ {
+  "id": "c8090214_abs",
+  "should_abstain": true,
+  "score": 0.2741,
+  "threshold": 0.3,
+  "uncovered": 0.4733,
+  "gold_in_context": false
+ },
+ {
+  "id": "gpt4_c27434e8_abs",
+  "should_abstain": true,
+  "score": 0.0876,
+  "threshold": 0.3,
+  "uncovered": 0.6804,
+  "gold_in_context": false
+ },
+ {
+  "id": "gpt4_fe651585_abs",
+  "should_abstain": true,
+  "score": -0.28,
+  "threshold": 0.3,
+  "uncovered": 0.7347,
+  "gold_in_context": false
+ },
+ {
+  "id": "6aeb4375_abs",
+  "should_abstain": true,
+  "score": 0.4128,
+  "threshold": 0.3,
+  "uncovered": 0.3191,
+  "gold_in_context": false
+ },
+ {
+  "id": "031748ae_abs",
+  "should_abstain": true,
+  "score": 0.395,
+  "threshold": 0.3,
+  "uncovered": 0.3389,
+  "gold_in_context": false
+ },
+ {
+  "id": "2698e78f_abs",
+  "should_abstain": true,
+  "score": 0.3913,
+  "threshold": 0.3,
+  "uncovered": 0.2816,
+  "gold_in_context": false
+ },
+ {
+  "id": "2133c1b5_abs",
+  "should_abstain": true,
+  "score": 0.255,
+  "threshold": 0.3,
+  "uncovered": 0.4945,
+  "gold_in_context": false
+ },
+ {
+  "id": "0ddfec37_abs",
+  "should_abstain": true,
+  "score": 0.4697,
+  "threshold": 0.3,
+  "uncovered": 0.2559,
+  "gold_in_context": false
+ },
+ {
+  "id": "f685340e_abs",
+  "should_abstain": true,
+  "score": 0.459,
+  "threshold": 0.3,
+  "uncovered": 0.2677,
+  "gold_in_context": false
+ },
+ {
+  "id": "gpt4_b5700ca0",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": true
+ },
+ {
+  "id": "8979f9ec",
+  "should_abstain": false,
+  "score": 0.2905,
+  "threshold": 0.3,
+  "uncovered": 0.455,
+  "gold_in_context": false
+ },
+ {
+  "id": "099778bb",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": false
+ },
+ {
+  "id": "1b9b7252",
+  "should_abstain": false,
+  "score": -0.9297,
+  "threshold": 0.3,
+  "uncovered": 0.916,
+  "gold_in_context": false
+ },
+ {
+  "id": "6d550036",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": true
+ },
+ {
+  "id": "d682f1a2",
+  "should_abstain": false,
+  "score": 0.3507,
+  "threshold": 0.3,
+  "uncovered": 0.3881,
+  "gold_in_context": true
+ },
+ {
+  "id": "1de5cff2",
+  "should_abstain": false,
+  "score": 0.3702,
+  "threshold": 0.3,
+  "uncovered": 0.3664,
+  "gold_in_context": true
+ },
+ {
+  "id": "gpt4_e414231e",
+  "should_abstain": false,
+  "score": 0.4347,
+  "threshold": 0.3,
+  "uncovered": 0.2948,
+  "gold_in_context": false
+ },
+ {
+  "id": "9a707b81",
+  "should_abstain": false,
+  "score": 0.3457,
+  "threshold": 0.3,
+  "uncovered": 0.3936,
+  "gold_in_context": false
+ },
+ {
+  "id": "7161e7e2",
+  "should_abstain": false,
+  "score": 0.2579,
+  "threshold": 0.3,
+  "uncovered": 0.4912,
+  "gold_in_context": false
+ },
+ {
+  "id": "8b9d4367",
+  "should_abstain": false,
+  "score": -1.1,
+  "threshold": 0.3,
+  "uncovered": 1.0,
+  "gold_in_context": false
+ },
+ {
+  "id": "77eafa52",
+  "should_abstain": false,
+  "score": 0.4012,
+  "threshold": 0.3,
+  "uncovered": 0.332,
+  "gold_in_context": false
+ },
+ {
+  "id": "bf659f65",
+  "should_abstain": false,
+  "score": 0.3312,
+  "threshold": 0.3,
+  "uncovered": 0.4097,
+  "gold_in_context": true
+ },
+ {
+  "id": "4baee567",
+  "should_abstain": false,
+  "score": -1.1,
+  "threshold": 0.3,
+  "uncovered": 1.0,
+  "gold_in_context": false
+ },
+ {
+  "id": "b759caee",
+  "should_abstain": false,
+  "score": 0.1594,
+  "threshold": 0.3,
+  "uncovered": 0.6007,
+  "gold_in_context": false
+ },
+ {
+  "id": "gpt4_31ff4165",
+  "should_abstain": false,
+  "score": 0.2505,
+  "threshold": 0.3,
+  "uncovered": 0.4995,
+  "gold_in_context": false
+ },
+ {
+  "id": "6ae235be",
+  "should_abstain": false,
+  "score": 0.3789,
+  "threshold": 0.3,
+  "uncovered": 0.3567,
+  "gold_in_context": false
+ },
+ {
+  "id": "853b0a1d",
+  "should_abstain": false,
+  "score": 0.5547,
+  "threshold": 0.3,
+  "uncovered": 0.1614,
+  "gold_in_context": true
+ },
+ {
+  "id": "8cf51dda",
+  "should_abstain": false,
+  "score": 0.0812,
+  "threshold": 0.3,
+  "uncovered": 0.6875,
+  "gold_in_context": false
+ },
+ {
+  "id": "a89d7624",
+  "should_abstain": false,
+  "score": 0.5323,
+  "threshold": 0.3,
+  "uncovered": 0.1863,
+  "gold_in_context": false
+ },
+ {
+  "id": "07741c44",
+  "should_abstain": false,
+  "score": 0.3716,
+  "threshold": 0.3,
+  "uncovered": 0.3649,
+  "gold_in_context": true
+ },
+ {
+  "id": "778164c6",
+  "should_abstain": false,
+  "score": -0.8745,
+  "threshold": 0.3,
+  "uncovered": 0.9217,
+  "gold_in_context": false
+ },
+ {
+  "id": "faba32e5",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": true
+ },
+ {
+  "id": "gpt4_1d4ab0c9",
+  "should_abstain": false,
+  "score": 0.3228,
+  "threshold": 0.3,
+  "uncovered": 0.4191,
+  "gold_in_context": false
+ },
+ {
+  "id": "gpt4_6dc9b45b",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": false
+ },
+ {
+  "id": "bcbe585f",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": true
+ },
+ {
+  "id": "8752c811",
+  "should_abstain": false,
+  "score": 0.3482,
+  "threshold": 0.3,
+  "uncovered": 0.3909,
+  "gold_in_context": false
+ },
+ {
+  "id": "95bcc1c8",
+  "should_abstain": false,
+  "score": 0.5856,
+  "threshold": 0.3,
+  "uncovered": 0.1271,
+  "gold_in_context": true
+ },
+ {
+  "id": "f0e564bc",
+  "should_abstain": false,
+  "score": 0.2298,
+  "threshold": 0.3,
+  "uncovered": 0.5224,
+  "gold_in_context": false
+ },
+ {
+  "id": "0f05491a",
+  "should_abstain": false,
+  "score": 0.1215,
+  "threshold": 0.3,
+  "uncovered": 0.6428,
+  "gold_in_context": false
+ },
+ {
+  "id": "b01defab",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": false
+ },
+ {
+  "id": "c960da58",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": true
+ },
+ {
+  "id": "1568498a",
+  "should_abstain": false,
+  "score": 0.0139,
+  "threshold": 0.3,
+  "uncovered": 0.7624,
+  "gold_in_context": false
+ },
+ {
+  "id": "f4f1d8a4",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": true
+ },
+ {
+  "id": "dfde3500",
+  "should_abstain": false,
+  "score": 0.3841,
+  "threshold": 0.3,
+  "uncovered": 0.351,
+  "gold_in_context": false
+ },
+ {
+  "id": "6222b6eb",
+  "should_abstain": false,
+  "score": -0.9734,
+  "threshold": 0.3,
+  "uncovered": 0.9394,
+  "gold_in_context": false
+ },
+ {
+  "id": "60bf93ed",
+  "should_abstain": false,
+  "score": 0.3667,
+  "threshold": 0.3,
+  "uncovered": 0.3704,
+  "gold_in_context": false
+ },
+ {
+  "id": "86f00804",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": false
+ },
+ {
+  "id": "ac031881",
+  "should_abstain": false,
+  "score": 0.4603,
+  "threshold": 0.3,
+  "uncovered": 0.2663,
+  "gold_in_context": false
+ },
+ {
+  "id": "54026fce",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": false
+ },
+ {
+  "id": "6b168ec8",
+  "should_abstain": false,
+  "score": 0.3421,
+  "threshold": 0.3,
+  "uncovered": 0.3977,
+  "gold_in_context": true
+ },
+ {
+  "id": "7e00a6cb",
+  "should_abstain": false,
+  "score": 0.541,
+  "threshold": 0.3,
+  "uncovered": 0.1767,
+  "gold_in_context": true
+ },
+ {
+  "id": "dad224aa",
+  "should_abstain": false,
+  "score": 0.4091,
+  "threshold": 0.3,
+  "uncovered": 0.3232,
+  "gold_in_context": true
+ },
+ {
+  "id": "c8090214",
+  "should_abstain": false,
+  "score": 0.5399,
+  "threshold": 0.3,
+  "uncovered": 0.1779,
+  "gold_in_context": false
+ },
+ {
+  "id": "1d4e3b97",
+  "should_abstain": false,
+  "score": -0.059,
+  "threshold": 0.3,
+  "uncovered": 0.654,
+  "gold_in_context": false
+ },
+ {
+  "id": "71017276",
+  "should_abstain": false,
+  "score": 0.3514,
+  "threshold": 0.3,
+  "uncovered": 0.3874,
+  "gold_in_context": true
+ },
+ {
+  "id": "8ebdbe50",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": true
+ },
+ {
+  "id": "gpt4_4929293b",
+  "should_abstain": false,
+  "score": 0.1817,
+  "threshold": 0.3,
+  "uncovered": 0.5405,
+  "gold_in_context": false
+ },
+ {
+  "id": "gpt4_70e84552",
+  "should_abstain": false,
+  "score": 0.4803,
+  "threshold": 0.3,
+  "uncovered": 0.2441,
+  "gold_in_context": false
+ },
+ {
+  "id": "gpt4_e061b84f",
+  "should_abstain": false,
+  "score": -0.6062,
+  "threshold": 0.3,
+  "uncovered": 1.0,
+  "gold_in_context": false
+ },
+ {
+  "id": "dcfa8644",
+  "should_abstain": false,
+  "score": 0.6,
+  "threshold": 0.3,
+  "uncovered": 0.1111,
+  "gold_in_context": false
+ },
+ {
+  "id": "58ef2f1c",
+  "should_abstain": false,
+  "score": 0.2316,
+  "threshold": 0.3,
+  "uncovered": 0.5205,
+  "gold_in_context": false
+ },
+ {
+  "id": "d851d5ba",
+  "should_abstain": false,
+  "score": 0.4381,
+  "threshold": 0.3,
+  "uncovered": 0.291,
+  "gold_in_context": false
+ },
+ {
+  "id": "0bc8ad93",
+  "should_abstain": false,
+  "score": 0.3218,
+  "threshold": 0.3,
+  "uncovered": 0.4202,
+  "gold_in_context": false
+ },
+ {
+  "id": "51b23612",
+  "should_abstain": false,
+  "score": 0.1628,
+  "threshold": 0.3,
+  "uncovered": 0.5969,
+  "gold_in_context": false
+ },
+ {
+  "id": "28bcfaac",
+  "should_abstain": false,
+  "score": -0.9358,
+  "threshold": 0.3,
+  "uncovered": 0.9387,
+  "gold_in_context": false
+ },
+ {
+  "id": "8077ef71",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": false
+ },
+ {
+  "id": "gpt4_a2d1d1f6",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": false
+ },
+ {
+  "id": "10d9b85a",
+  "should_abstain": false,
+  "score": 0.3937,
+  "threshold": 0.3,
+  "uncovered": 0.3403,
+  "gold_in_context": false
+ },
+ {
+  "id": "a3045048",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": false
+ },
+ {
+  "id": "f9e8c073",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": false
+ },
+ {
+  "id": "gpt4_385a5000",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": true
+ },
+ {
+  "id": "2788b940",
+  "should_abstain": false,
+  "score": 0.4454,
+  "threshold": 0.3,
+  "uncovered": 0.2829,
+  "gold_in_context": true
+ },
+ {
+  "id": "09d032c9",
+  "should_abstain": false,
+  "score": 0.0991,
+  "threshold": 0.3,
+  "uncovered": 0.4868,
+  "gold_in_context": false
+ },
+ {
+  "id": "gpt4_5438fa52",
+  "should_abstain": false,
+  "score": 0.3277,
+  "threshold": 0.3,
+  "uncovered": 0.4137,
+  "gold_in_context": false
+ },
+ {
+  "id": "4388e9dd",
+  "should_abstain": false,
+  "score": -0.7518,
+  "threshold": 0.3,
+  "uncovered": 0.9171,
+  "gold_in_context": false
+ },
+ {
+  "id": "dccbc061",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": true
+ },
+ {
+  "id": "65240037",
+  "should_abstain": false,
+  "score": 0.4374,
+  "threshold": 0.3,
+  "uncovered": 0.2918,
+  "gold_in_context": false
+ },
+ {
+  "id": "4dfccbf8",
+  "should_abstain": false,
+  "score": -0.1554,
+  "threshold": 0.3,
+  "uncovered": 0.6553,
+  "gold_in_context": false
+ },
+ {
+  "id": "gpt4_e072b769",
+  "should_abstain": false,
+  "score": 0.3669,
+  "threshold": 0.3,
+  "uncovered": 0.3701,
+  "gold_in_context": false
+ },
+ {
+  "id": "6071bd76",
+  "should_abstain": false,
+  "score": 0.4487,
+  "threshold": 0.3,
+  "uncovered": 0.2793,
+  "gold_in_context": false
+ },
+ {
+  "id": "18bc8abd",
+  "should_abstain": false,
+  "score": 0.5112,
+  "threshold": 0.3,
+  "uncovered": 0.2098,
+  "gold_in_context": true
+ },
+ {
+  "id": "993da5e2",
+  "should_abstain": false,
+  "score": 0.4709,
+  "threshold": 0.3,
+  "uncovered": 0.2545,
+  "gold_in_context": false
+ },
+ {
+  "id": "60d45044",
+  "should_abstain": false,
+  "score": -0.0064,
+  "threshold": 0.3,
+  "uncovered": 0.6229,
+  "gold_in_context": false
+ },
+ {
+  "id": "2ebe6c90",
+  "should_abstain": false,
+  "score": 0.5736,
+  "threshold": 0.3,
+  "uncovered": 0.1405,
+  "gold_in_context": false
+ },
+ {
+  "id": "e831120c",
+  "should_abstain": false,
+  "score": 0.6295,
+  "threshold": 0.3,
+  "uncovered": 0.0783,
+  "gold_in_context": false
+ },
+ {
+  "id": "ce6d2d27",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": false
+ },
+ {
+  "id": "f685340e",
+  "should_abstain": false,
+  "score": 0.5474,
+  "threshold": 0.3,
+  "uncovered": 0.1695,
+  "gold_in_context": false
+ },
+ {
+  "id": "b0479f84",
+  "should_abstain": false,
+  "score": -0.6444,
+  "threshold": 0.3,
+  "uncovered": 0.8397,
+  "gold_in_context": false
+ },
+ {
+  "id": "gpt4_68e94287",
+  "should_abstain": false,
+  "score": 0.3664,
+  "threshold": 0.3,
+  "uncovered": 0.3707,
+  "gold_in_context": false
+ },
+ {
+  "id": "gpt4_59149c78",
+  "should_abstain": false,
+  "score": -0.0282,
+  "threshold": 0.3,
+  "uncovered": 0.8091,
+  "gold_in_context": false
+ },
+ {
+  "id": "gpt4_e05b82a6",
+  "should_abstain": false,
+  "score": 0.3557,
+  "threshold": 0.3,
+  "uncovered": 0.3826,
+  "gold_in_context": false
+ },
+ {
+  "id": "d52b4f67",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": true
+ },
+ {
+  "id": "8e91e7d9",
+  "should_abstain": false,
+  "score": 0.3345,
+  "threshold": 0.3,
+  "uncovered": 0.4061,
+  "gold_in_context": true
+ },
+ {
+  "id": "28dc39ac",
+  "should_abstain": false,
+  "score": 0.4828,
+  "threshold": 0.3,
+  "uncovered": 0.2414,
+  "gold_in_context": false
+ },
+ {
+  "id": "06db6396",
+  "should_abstain": false,
+  "score": 0.7,
+  "threshold": 0.3,
+  "uncovered": 0.0,
+  "gold_in_context": true
+ },
+ {
+  "id": "94f70d80",
+  "should_abstain": false,
+  "score": 0.5437,
+  "threshold": 0.3,
+  "uncovered": 0.1736,
+  "gold_in_context": true
+ },
+ {
+  "id": "58bf7951",
+  "should_abstain": false,
+  "score": 0.4962,
+  "threshold": 0.3,
+  "uncovered": 0.2264,
+  "gold_in_context": true
+ },
+ {
+  "id": "ba358f49",
+  "should_abstain": false,
+  "score": 0.4746,
+  "threshold": 0.3,
+  "uncovered": 0.2504,
+  "gold_in_context": false
+ },
+ {
+  "id": "57f827a0",
+  "should_abstain": false,
+  "score": 0.0437,
+  "threshold": 0.3,
+  "uncovered": 0.5534,
+  "gold_in_context": false
+ }
+]

@@ -268,6 +268,35 @@ class HydraEpisodicIndex:
         return hits
 
 
+def describe_sidecar(settings: Settings | None = None) -> dict[str, Any]:
+    """Why the HydraDB sidecar is or is not active, for the health endpoint.
+
+    Reported rather than inferred: "off" has three quite different causes --
+    disabled, no key, or the SDK missing -- and a judge or an operator looking
+    at /health should not have to guess which one they are looking at. The API
+    key itself is never included, only whether one is present.
+    """
+    settings = settings or get_settings()
+    installed = importlib.util.find_spec("hydra_db") is not None
+    if not settings.sidecar_enabled:
+        state, reason = "off", "disabled by WEAVE_SIDECAR"
+    elif not settings.sidecar_api_key:
+        state, reason = "off", "no API key (set HYDRA_DB_API_KEY)"
+    elif not installed:
+        state, reason = "off", "hydradb-sdk not installed"
+    else:
+        state, reason = "active", "indexing episodic utterances"
+    return {
+        "state": state,
+        "reason": reason,
+        "sdk_installed": installed,
+        "api_key_present": bool(settings.sidecar_api_key),
+        "database": settings.sidecar_database,
+        "collection": settings.sidecar_collection,
+        "role": "episodic text index; the graph remains the source of truth",
+    }
+
+
 def get_sidecar(settings: Settings | None = None) -> EpisodicIndex | None:
     """The configured index, or ``None`` when the feature is off.
 

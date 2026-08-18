@@ -8,6 +8,7 @@ only loses ``is_current``.
 
 from __future__ import annotations
 
+import logging
 import re
 import time
 from dataclasses import dataclass
@@ -22,6 +23,8 @@ from ..models.episodic import Session, Turn
 from ..models.semantic import Conflict, Entity, Fact
 from ..util import canonicalize, count_tokens, dedupe, new_id, now_iso, truncate
 from .extraction import ExtractedFact, get_extractor, is_functional
+
+log = logging.getLogger("weave.ingestion")
 
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
 
@@ -75,6 +78,7 @@ class IngestionService:
             if tx.match(S.SESSION, {"id": session.id}, limit=1):
                 result.already_ingested = True
                 result.latency_ms = int((time.perf_counter() - started) * 1000)
+                log.debug("session %s already ingested; skipping", session.id)
                 return result
 
             if not session.session_summary:
@@ -108,6 +112,20 @@ class IngestionService:
         self._index_episodic(session)
 
         result.latency_ms = int((time.perf_counter() - started) * 1000)
+        # One line per ingested session, at info: this is the hot path, and a
+        # conflict count that jumps is the first sign extraction has drifted.
+        log.info(
+            "ingested %s: %d turns, %d facts (+%d reinforced), %d entities, "
+            "%d conflict(s) in %d ms via %s",
+            session.id,
+            result.turns,
+            result.facts_created,
+            result.facts_reinforced,
+            result.entities_extracted,
+            result.conflicts_detected,
+            result.latency_ms,
+            result.extraction_method,
+        )
         return result
 
     def _index_episodic(self, session: Session) -> None:
