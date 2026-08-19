@@ -1,0 +1,170 @@
+{
+  "dataset_source": "local:longmemeval-s.json",
+  "budget_tokens": 600,
+  "configs": {
+    "full-context": {
+      "config": "full-context",
+      "description": "the entire haystack -- upper bound on recall, and on cost",
+      "total": 100,
+      "context_recall": {
+        "rate": 1.0,
+        "hits": 94,
+        "graded": 94
+      },
+      "accuracy": {
+        "rate": 0.94,
+        "correct": 94,
+        "graded": 100,
+        "reader": "oracle"
+      },
+      "unanswerable": {
+        "rate": 0.0,
+        "correct": 0,
+        "graded": 6
+      },
+      "distractor_present": {
+        "rate": null,
+        "hits": 0,
+        "graded": 0
+      },
+      "context_recall_when_attempted": {
+        "rate": 1.0,
+        "hits": 94,
+        "graded": 94,
+        "abstained_on_answerable": 0
+      },
+      "tokens": {
+        "avg_context_tokens": 103174.2,
+        "avg_haystack_tokens": 103144.0,
+        "reduction_x": 1.0
+      },
+      "latency_ms": {
+        "mean": 0.08,
+        "median": 0.0
+      }
+    },
+    "recency": {
+      "config": "recency",
+      "description": "most recent turns until the budget is spent (truncating window)",
+      "total": 100,
+      "context_recall": {
+        "rate": 0.0426,
+        "hits": 4,
+        "graded": 94
+      },
+      "accuracy": {
+        "rate": 0.04,
+        "correct": 4,
+        "graded": 100,
+        "reader": "oracle"
+      },
+      "unanswerable": {
+        "rate": 0.0,
+        "correct": 0,
+        "graded": 6
+      },
+      "distractor_present": {
+        "rate": null,
+        "hits": 0,
+        "graded": 0
+      },
+      "context_recall_when_attempted": {
+        "rate": 0.0426,
+        "hits": 4,
+        "graded": 94,
+        "abstained_on_answerable": 0
+      },
+      "tokens": {
+        "avg_context_tokens": 600.3,
+        "avg_haystack_tokens": 103144.0,
+        "reduction_x": 171.8
+      },
+      "latency_ms": {
+        "mean": 99.98,
+        "median": 97.0
+      }
+    },
+    "lexical-topk": {
+      "config": "lexical-topk",
+      "description": "IDF-weighted keyword retrieval over raw turns, no graph",
+      "total": 100,
+      "context_recall": {
+        "rate": 0.8723,
+        "hits": 82,
+        "graded": 94
+      },
+      "accuracy": {
+        "rate": 0.82,
+        "correct": 82,
+        "graded": 100,
+        "reader": "oracle"
+      },
+      "unanswerable": {
+        "rate": 0.0,
+        "correct": 0,
+        "graded": 6
+      },
+      "distractor_present": {
+        "rate": null,
+        "hits": 0,
+        "graded": 0
+      },
+      "context_recall_when_attempted": {
+        "rate": 0.8723,
+        "hits": 82,
+        "graded": 94,
+        "abstained_on_answerable": 0
+      },
+      "tokens": {
+        "avg_context_tokens": 596.4,
+        "avg_haystack_tokens": 103144.0,
+        "reduction_x": 172.9
+      },
+      "latency_ms": {
+        "mean": 196.52,
+        "median": 194.5
+      }
+    },
+    "weave": {
+      "config": "weave",
+      "description": "the full three-layer system",
+      "total": 100,
+      "context_recall": {
+        "rate": 0.617,
+        "hits": 58,
+        "graded": 94
+      },
+      "accuracy": {
+        "rate": 0.62,
+        "correct": 62,
+        "graded": 100,
+        "reader": "oracle"
+      },
+      "unanswerable": {
+        "rate": 0.6667,
+        "correct": 4,
+        "graded": 6
+      },
+      "distractor_present": {
+        "rate": null,
+        "hits": 0,
+        "graded": 0
+      },
+      "context_recall_when_attempted": {
+        "rate": 0.9062,
+        "hits": 58,
+        "graded": 64,
+        "abstained_on_answerable": 30
+      },
+      "tokens": {
+        "avg_context_tokens": 367.9,
+        "avg_haystack_tokens": 103144.0,
+        "reduction_x": 280.3
+      },
+      "latency_ms": {
+        "mean": 17205.04,
+        "median": 16676.5
+      }
+    }
+  }
+}

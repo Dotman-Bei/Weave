@@ -13,7 +13,7 @@
 > the README rewrite. Every row it marked ❌ was re-checked against the current
 > tree. **Cleared:** A10, C4, C5, C7, D1.1, D3.4, F6, F7 — plus E3.5 (3 → 5),
 > E4.5 (2 → 4), E4.6 (4 → 5), E5.5 (2 → 5) and the test count (86 → 101).
-> E1–E5 average 3.72 → **4.02**; Section F 6/10 → **8/10**.
+> E1–E5 average 3.72 → **4.09**; Section F 6/10 → **8/10**.
 >
 > **Still open — two items, one of them work:**
 > * **D2 — no demo video.** The only remaining hard blocker that effort can fix.
@@ -180,13 +180,13 @@ Rate your project **1–5** on each criterion. Be honest. A 3 is "average for th
 | # | Checkpoint | Score | Evidence |
 |---|------------|-------|----------|
 | E4.1 | Benchmark numbers are reported (LongMemEval or LoCoMo) | **5** | LongMemEval-S 500/500 and LoCoMo 300 — both real releases, not synthetic. |
-| E4.2 | Accuracy is measured against a baseline (full-context or naive retrieval) | **2** | Full-context token count is reported; **full-context accuracy is never measured**, so there is no baseline to beat. |
+| E4.2 | Accuracy is measured against a baseline (full-context or naive retrieval) | **4** | Re-scored 2026-08-19. Both baselines the row asks for are now measured on 100 real LongMemEval questions (`results/baselines-accuracy-100.json`): **full-context 94.0%**, `lexical-topk` 82.0%, `recency` 4.0%, **weave 62.0%** — one oracle reader held constant across all four arms, so retrieval is the only variable. Reported against us where it goes against us: Weave loses to the keyword baseline on raw accuracy (62.0% vs 82.0%) because abstention costs it 30 answerable questions, and it takes the unanswerable ones **66.7% to 0.0%** — the only arm that scores there at all. Held at 4, not 5: the oracle reader is a ceiling, not a generator, so the *shipped* system has still never been run head-to-head against an LLM reading the full haystack. That needs an API key. |
 | E4.3 | Abstention accuracy is explicitly measured | **5** | Precision/recall/F1 reported on every run, with a signals dump in `results/abstention-signals.json`. |
 | E4.4 | Token efficiency is quantified (tokens/query vs. 115K full context) | **5** | 198× on LongMemEval, 43.6× on LoCoMo. Quantified per question. |
 | E4.5 | Ablations prove each layer's contribution (episodic-only vs. semantic-only vs. full) | **4** | Re-scored 08-19. The published table is now real LongMemEval (n=60), and it proves the episodic and semantic layers: `semantic-only` collapses to 10.0% with **0% context recall** (facts are an index, not evidence), `episodic-only` reaches 26.7%, `full-weave` 28.3%. Held at 4, not 5: `full-weave` **ties** `no-consolidation` on accuracy (17/60 each), so consolidation's contribution shows only in context recall (64.3% → 69.6%) and abstention F1 (22.2% → 25.0%) — and a one-question gap at n=60 is not significant. The README states this limitation itself rather than claiming the win. |
 | E4.6 | Results are reproducible (benchmark script runs deterministically) | **5** | Re-scored 08-19. Scripts are deterministic and stratified sampling is seeded, and `.gitignore` now excludes only `results/*.log` — every JSON report the README cites is tracked and independently checkable. |
 
-**E4 Average Score:** **4.33** / 5 *(was 3.83; E4.5 re-scored 2 → 4 and E4.6 4 → 5 on 2026-08-19. E4.2 stays at 2 — no full-context accuracy baseline has been measured.)*
+**E4 Average Score:** **4.67** / 5 *(was 3.83; on 2026-08-19 E4.2 re-scored 2 → 4, E4.5 2 → 4, E4.6 4 → 5.)*
 
 ### E5: Originality (Weight: High)
 
@@ -254,19 +254,19 @@ These are the things that separate a "good submission" from a "track winner." Mo
 | E1 Technical Execution | **4.57** | 3.0 | 4.0 | 4.5 | ✅ champion tier |
 | E2 HydraDB Usage | **2.80** | 3.5 | 4.5 | 5.0 | ❌ **below finalist** |
 | E3 Product Completeness | **3.80** | 3.0 | 3.5 | 4.0 | ✅ win-track tier *(E3.3 video = 1 caps it)* |
-| E4 Quality of Results | **4.33** | 3.0 | 4.0 | 4.5 | ✅ win-track tier |
+| E4 Quality of Results | **4.67** | 3.0 | 4.0 | 4.5 | ✅ champion tier |
 | E5 Originality | **4.60** | 3.5 | 4.5 | 5.0 | ✅ win-track tier |
 | E6 Best Use of HydraDB | **4.75** | 3.0 | 4.0 | 4.5 | ✅ champion tier |
 | F Differentiators | **8/10** | 5/10 | 7/10 | 9/10 | ✅ win-track tier *(F8 video = the 9th)* |
 
-**E1–E5 average: 4.02** *(was 3.72; on 2026-08-19 E3 3.40 → 3.80, E4 3.83 → 4.33, E5 4.00 → 4.60).*
+**E1–E5 average: 4.09** *(was 3.72; on 2026-08-19 E3 3.40 → 3.80, E4 3.83 → 4.67, E5 4.00 → 4.60).*
 
 ### Final Decision
 
 | Question | Answer |
 |----------|--------|
 | All hard blockers pass? | ❌ **NO** — **C1 and D2** remain. C1 is unpassable as written (HydraDB exposes no graph interface); **D2 is the only one that is still work.** A10, C4, C5, C7, D1.1 cleared 2026-08-19. |
-| Average score across E1–E5 ≥ 3.5? | ✅ **YES** — 4.02 |
+| Average score across E1–E5 ≥ 3.5? | ✅ **YES** — 4.09 |
 | At least 7/10 differentiators (Section F) present? | ✅ **YES** — 8/10 (F6 + F7 cleared 2026-08-19) |
 | Demo video is compelling and under 3 minutes? | ❌ **NO** — no video exists |
 | You would be impressed if YOU were the judge? | ⚠️ **By the engineering, yes. The graph-vs-vector story is now told well; what is left is that the default path is still SQLite (C1) and there is nothing to watch (D2).** |
@@ -275,9 +275,11 @@ These are the things that separate a "good submission" from a "track winner." Mo
 
 ⛔ **NO-GO as of 2026-08-18** → ⚠️ **ONE BLOCKER LEFT as of 2026-08-19: the demo video.**
 
-**The engineering was always finalist-to-champion grade (E1 4.57, E6 4.75); the submission around it was not.** The 08-18 verdict was that Weave lost points not for what it does but for what it failed to *say* and *show*. The **say** half is now done — the README carries Attribution, "Why a graph, and not a vector store", "What breaks without the graph" and "Why object-store backing matters here", which between them cleared A10, C4, C5, C7, D1.1 and F7, re-scored E5.5 (2 → 5) and E3.5 (3 → 5), and moved E3 to 3.80, E5 to 4.60, the E1–E5 average to 3.92 and Section F to 7/10. A live deployment was also verified, clearing D3.4.
+**The engineering was always finalist-to-champion grade (E1 4.57, E6 4.75); the submission around it was not.** The 08-18 verdict was that Weave lost points not for what it does but for what it failed to *say* and *show*. The **say** half is now done — the README carries Attribution, "Why a graph, and not a vector store", "What breaks without the graph" and "Why object-store backing matters here", which between them cleared A10, C4, C5, C7, D1.1 and F7, re-scored E5.5 (2 → 5) and E3.5 (3 → 5), and moved E3 to 3.80, E5 to 4.60, the E1–E5 average and Section F to 7/10. A live deployment was also verified, clearing D3.4.
 
-The real-data ablation was published as well, clearing F6 and moving E4.5 (2 → 4) and E4.6 (4 → 5). Section F now stands at **8/10** and the E1–E5 average at **4.02** — win-track on E3, E4, E5 and F, champion tier on E1 and E6.
+The real-data ablation was published as well, and a full-context accuracy baseline measured — together clearing F6, and moving E4.2 (2 → 4), E4.5 (2 → 4) and E4.6 (4 → 5). Section F now stands at **8/10** and the E1–E5 average at **4.09** — win-track on E3 and E5, champion tier on E1, E4 and E6.
+
+The full-context number is the one worth carrying into the room: **stuffing the whole haystack scores 94.0% and costs 280× more than Weave's 62.0%, and it scores 0.0% on the questions that have no answer.**
 
 What remains:
 
@@ -302,7 +304,7 @@ Rows struck through were verified complete on the 08-19 re-run.
 | ~~**P0**~~ | ~~Add **object-store economics** paragraph~~ — ✅ **DONE 08-19** as "Why object-store backing matters here" (198:1 ratio, hot/cold layer table). Clears C5; **E2.5 stays at 1** — it asks for *leveraged*, and the README correctly says "not yet exercised" | C5 ✅, E2.5 ⬜ | — |
 | ~~**P0**~~ | ~~Add **Team** section to README~~ — ✅ **DONE 08-19.** Solo build + contribution breakdown | D1.1 ✅, D3.1 ⬜ *(form still manual)* | — |
 | ~~**P1**~~ | ~~Run the ablation on real LongMemEval and publish it~~ — ✅ **DONE.** Published as the README **Ablation** table (n=60, `local:longmemeval-s.json`), with the synthetic conflict-resolution column explicitly retired as unscoreable on real data | E4.5 ✅ *(2 → 4)*, F6 ✅ | — |
-| **P1** | **Measure a full-context baseline** — accuracy of stuffing the haystack vs Weave's 520 tokens | E4.2 | 45 min |
+| ~~**P1**~~ | ~~Measure a full-context baseline~~ — ✅ **DONE 08-19.** Accuracy arm added to `benchmarks/baselines.py` (oracle reader, four retrievers, one generator); full-context **94.0%** against weave **62.0%** at 280× fewer tokens, published in the README | E4.2 ✅ *(2 → 4)* | — |
 | **P1** | Correct the Section I form draft: `algo.MSpaths` is implemented with a verified fallback, **not** running in production | D3.5, F10 | 10 min |
 | **P2** | Refresh stale README numbers — test count corrected to **101** on 08-19 (99 passed, 1 skipped, 1 xfailed); still to do: regenerate the results table from the newest `results/*.json` and re-check the `Where did I live before?` sample output | E3.5 | 15 min |
 | ~~**P2**~~ | ~~Commit `results/*.json`~~ — ✅ **DONE.** `.gitignore` now ignores only `results/*.log`; the JSON reports are tracked and the README's figures reconcile against `longmemeval-s-final.json` | E4.6 ✅ | — |

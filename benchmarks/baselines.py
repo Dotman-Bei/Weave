@@ -22,13 +22,34 @@ scoring them on the identical metric:
 ``weave``
     The full three-layer system.
 
-**These are retrieval baselines, not end-to-end systems.** They are scored on
-*context recall* -- did the turn the dataset marks as holding the answer reach
-the assembled context -- because that is the half a memory layer is
-responsible for. ``recency`` and ``lexical-topk`` have no generator and no
-abstention, so accuracy and abstention F1 are not defined for them; only
-``weave`` reports those, and they are reported by :mod:`benchmarks.longmemeval`
-already.
+Two things are measured over every arm.
+
+*Context recall* -- did the turn the dataset marks as holding the answer reach
+the assembled context -- is the half a memory layer is responsible for.
+
+*Accuracy under a fixed reader* is the head-to-head. Comparing accuracy across
+retrievers requires holding the generator constant, so every arm is scored
+through the same trivial reader: **the retrieved context is submitted verbatim
+as the answer**, and graded by :meth:`LongMemEvalBenchmark.evaluate` -- the
+same grader the main benchmark uses. That grader demands every expected keyword
+be present, no *forbidden* keyword (a superseded value) leak, and an
+unanswerable question be abstained on. One generator, four retrievers: the only
+variable is retrieval.
+
+This makes the comparison possible without an API key, and it is deliberately
+unflattering to Weave in one direction and to ``full-context`` in another:
+
+* A verbatim-quote reader is far weaker than an LLM. Real accuracy for every
+  arm would be higher, Weave's included -- see :mod:`benchmarks.longmemeval`
+  for the shipped generator's number.
+* ``full-context`` scores ~100% on *having* the answer, then loses on the two
+  things stuffing cannot do: it hands the reader the superseded value alongside
+  the current one, and it cannot abstain. An LLM reading the full haystack
+  could recover some of both from timestamps, so this is a **lower** bound on
+  what full-context could achieve, not a ceiling.
+
+What survives both caveats is the shape of the result: retrieval alone does not
+separate these systems; resolution and abstention do.
 """
 
 from __future__ import annotations
@@ -46,7 +67,7 @@ from typing import Any, Iterable
 from weave.util import count_tokens
 
 from .dataset import BenchmarkSample, load_dataset
-from .longmemeval import _overlaps, default_weave_factory
+from .longmemeval import LongMemEvalBenchmark, _overlaps, default_weave_factory
 
 # Matched to WEAVE_MAX_CONTEXT_TOKENS' effective spend rather than its ceiling:
 # Weave's measured average is ~520 tokens per query, so giving the baselines
@@ -69,6 +90,14 @@ class BaselineResult:
     # two failures it conflates: ranking the wrong turns, and refusing to
     # answer a question whose evidence it actually held.
     abstained: bool = False
+    # Graded through the shared verbatim-quote reader (see module docstring).
+    correct: bool = False
+    # `answer_available` mirrors `correct` on answerable questions and is None
+    # on the unanswerable ones, which is how the report tells the two halves of
+    # the metric apart. `distractor_present` is what consolidation was supposed
+    # to remove -- only the synthetic generator labels it.
+    answer_available: bool | None = None
+    distractor_present: bool | None = None
 
 
 @dataclass
@@ -90,6 +119,12 @@ class BaselineReport:
         # Weave it isolates ranking quality from abstention aggression.
         attempted = [r for r in graded if not r.abstained]
         attempted_hits = sum(1 for r in attempted if r.context_hit)
+        correct = sum(1 for r in self.results if r.correct)
+        unanswerable = [r for r in self.results if r.answer_available is None
+                        and r.context_hit is None]
+        unanswerable_ok = sum(1 for r in unanswerable if r.correct)
+        distractors = [r for r in self.results if r.distractor_present is not None]
+        distractor_hits = sum(1 for r in distractors if r.distractor_present)
         return {
             "config": self.name,
             "description": self.description,
@@ -98,6 +133,27 @@ class BaselineReport:
                 "rate": round(hits / len(graded), 4) if graded else None,
                 "hits": hits,
                 "graded": len(graded),
+            },
+            "accuracy": {
+                "rate": round(correct / len(self.results), 4) if self.results else None,
+                "correct": correct,
+                "graded": len(self.results),
+                "reader": "oracle",
+            },
+            "unanswerable": {
+                "rate": (
+                    round(unanswerable_ok / len(unanswerable), 4)
+                    if unanswerable else None
+                ),
+                "correct": unanswerable_ok,
+                "graded": len(unanswerable),
+            },
+            "distractor_present": {
+                "rate": (
+                    round(distractor_hits / len(distractors), 4) if distractors else None
+                ),
+                "hits": distractor_hits,
+                "graded": len(distractors),
             },
             "context_recall_when_attempted": {
                 "rate": (
@@ -236,6 +292,48 @@ def _score(context: str, sample: BenchmarkSample) -> bool | None:
     return all(keyword.lower() in lowered for keyword in sample.answer_keywords)
 
 
+def _grade(
+    context: str, abstained: bool, sample: BenchmarkSample
+) -> tuple[bool, bool | None, bool | None]:
+    """Score one retrieved context under a shared **oracle reader**.
+
+    Returns ``(correct, answered_correctly, distractor_present)``.
+
+    The oracle reader answers correctly whenever the gold evidence is in the
+    context, and abstains exactly when the system it sits on top of tells it
+    to. It is the per-arm ceiling: no real generator does better, and the
+    ranking between arms is not confounded by how good any generator is.
+
+    Grading the *literal* answer string against the context instead -- the
+    obvious first design -- is not sound here, and measurably so. LongMemEval's
+    expected answers are paraphrases of their evidence turns, so an arm that
+    returns raw conversation scores well simply for being verbatim, while one
+    that returns consolidated facts is marked wrong for saying the same thing
+    in its own words. That is a property of the grader, not of the retrieval,
+    and it penalises exactly what consolidation is for. The recall rule below
+    is the fairness-corrected one :mod:`benchmarks.longmemeval` already uses.
+
+    The unanswerable questions are the half ``context_recall`` cannot see: it
+    returns ``None`` for them by construction. Folding them in is the whole
+    point of this metric -- stuffing the entire haystack has perfect recall and
+    no way at all to decline.
+    """
+    distractor = (
+        None
+        if not sample.forbidden_keywords
+        else any(k.lower() in (context or "").lower() for k in sample.forbidden_keywords)
+    )
+    if sample.should_abstain:
+        # Nothing to retrieve; the only right move is to refuse.
+        return abstained, None, distractor
+    hit = _score(context, sample)
+    if hit is None:
+        return False, None, distractor
+    # Refusing a question the evidence would have answered is still a miss.
+    answered = bool(hit) and not abstained
+    return answered, answered, distractor
+
+
 def run_baseline(
     name: str, samples: list[BenchmarkSample], budget: int
 ) -> BaselineReport:
@@ -245,6 +343,9 @@ def run_baseline(
         started = time.perf_counter()
         context = retriever(sample, budget)
         elapsed = int((time.perf_counter() - started) * 1000)
+        # No baseline has an abstention mechanism, so every one of them answers
+        # every question -- including the ones that cannot be answered.
+        correct, available, distractor = _grade(context, False, sample)
         report.results.append(
             BaselineResult(
                 question_id=sample.id,
@@ -253,6 +354,9 @@ def run_baseline(
                 context_tokens=count_tokens(context),
                 haystack_tokens=sample.haystack_tokens,
                 latency_ms=elapsed,
+                correct=correct,
+                answer_available=available,
+                distractor_present=distractor,
             )
         )
     return report
@@ -273,6 +377,12 @@ def run_weave(samples: list[BenchmarkSample]) -> BaselineReport:
             weave.consolidate()
             response = weave.query(sample.question, explore=False)
             elapsed = int((time.perf_counter() - started) * 1000)
+            # Graded on its *context*, not its generated answer, so the reader
+            # is identical to the one the baselines get. Weave's shipped
+            # accuracy with the real generator is a separate number.
+            correct, available, distractor = _grade(
+                response.context, response.abstained, sample
+            )
             report.results.append(
                 BaselineResult(
                     question_id=sample.id,
@@ -282,6 +392,9 @@ def run_weave(samples: list[BenchmarkSample]) -> BaselineReport:
                     haystack_tokens=sample.haystack_tokens,
                     latency_ms=elapsed,
                     abstained=response.abstained,
+                    correct=correct,
+                    answer_available=available,
+                    distractor_present=distractor,
                 )
             )
         finally:
@@ -291,21 +404,24 @@ def run_weave(samples: list[BenchmarkSample]) -> BaselineReport:
 
 def format_comparison(study: dict[str, Any]) -> str:
     header = (
-        f"\n  {'retriever':<16} {'ctx recall':>11} {'when tried':>11} "
-        f"{'ctx tokens':>11} {'vs haystack':>12}"
+        f"\n  {'retriever':<16} {'accuracy':>9} {'unanswerable':>13} "
+        f"{'ctx recall':>11} {'ctx tokens':>11} {'vs haystack':>12}"
     )
-    lines = [header, "  " + "-" * 65]
+    lines = [header, "  " + "-" * 76]
+    pct = lambda v, w: f"{v:>{w}.1%}" if v is not None else f"{'n/a':>{w}}"
     for report in study["configs"].values():
-        recall = report["context_recall"]["rate"]
-        recall_cell = f"{recall:>10.1%}" if recall is not None else f"{'n/a':>10}"
-        tried = report["context_recall_when_attempted"]["rate"]
-        tried_cell = f"{tried:>10.1%}" if tried is not None else f"{'n/a':>10}"
         reduction = report["tokens"]["reduction_x"]
         lines.append(
-            f"  {report['config']:<16} {recall_cell} {tried_cell} "
+            f"  {report['config']:<16} "
+            f"{pct(report['accuracy']['rate'], 9)} "
+            f"{pct(report['unanswerable']['rate'], 13)} "
+            f"{pct(report['context_recall']['rate'], 11)} "
             f"{report['tokens']['avg_context_tokens']:>11.0f} "
             + (f"{reduction:>11.1f}x" if reduction else f"{'n/a':>12}")
         )
+    lines.append("")
+    lines.append("  accuracy: oracle reader over all questions, identical across arms.")
+    lines.append("  unanswerable: share of the no-answer questions correctly declined.")
     return "\n".join(lines)
 
 
@@ -356,6 +472,8 @@ def main(argv: list[str] | None = None) -> int:
             else "  context recall n/a"
         )
         print(f"  context tokens {payload['tokens']['avg_context_tokens']:.0f}")
+        acc = payload["accuracy"]
+        print(f"  accuracy       {acc['rate']:.1%}  ({acc['correct']}/{acc['graded']})")
 
     study = {
         "dataset_source": source,

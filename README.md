@@ -501,6 +501,57 @@ attempting — is **entirely abstention**. It refuses 30 of the 94 answerable
 questions, and every refusal scores as a miss. That is the one real weakness,
 and it is measured rather than asserted below.
 
+#### Accuracy against a full-context baseline
+
+Context recall says whether the evidence arrived. It does not say whether the
+question was *answered*, and it cannot say anything at all about the questions
+that have no answer — it returns `n/a` for those by construction. So the same
+four arms are scored a second way, over all 100 questions including the 6
+unanswerable ones. Raw report:
+[`results/baselines-accuracy-100.json`](results/baselines-accuracy-100.json).
+
+Comparing accuracy across retrievers requires holding the generator constant,
+so every arm is read by the same **oracle reader**: it answers correctly
+whenever the gold evidence reached the context, and abstains exactly when the
+system beneath it says to. That is each arm's ceiling, and the only variable
+left is retrieval.
+
+| Retriever | Accuracy | Unanswerable | Context recall | Context tokens |
+|---|---|---|---|---|
+| `full-context` — the whole haystack | **94.0%** | 0.0% | 100.0% | 103,174 |
+| `lexical-topk` — IDF keywords, no graph | 82.0% | 0.0% | 87.2% | 596 |
+| **`weave`** | **62.0%** | **66.7%** | 61.7% | **368** |
+| `recency` — truncating window | 4.0% | 0.0% | 4.3% | 600 |
+
+**Stuffing the entire haystack is the accuracy ceiling, and it costs 280× more
+than Weave to reach it.** Weave recovers 66% of that ceiling on 0.4% of the
+tokens. Read the rows honestly and there are three findings, one of which is
+against us:
+
+* **Weave loses to a keyword baseline on raw accuracy** — 62.0% against 82.0%.
+  The cause is already named above: abstention. Weave refuses 30 of the 94
+  answerable questions and every refusal scores zero. On the questions it does
+  attempt it finds the evidence 90.6% of the time against `lexical-topk`'s
+  87.2%, for 38% fewer tokens — but a system that declines a third of the
+  answerable questions has bought its precision at a real price, and the
+  threshold that sets it is measured in the next section rather than defended.
+* **Weave is the only arm that scores anything at all on the unanswerable
+  questions** — 66.7% against 0.0% everywhere else. This is not a close
+  contest; it is a capability the other three do not have. `full-context` holds
+  every fact in the corpus and still answers "what is my blood type?" with
+  confident nonsense, because nothing in a stuffed window can represent *the
+  answer is not here*.
+* **`recency` is the control.** A truncating context window — what most agents
+  ship today — answers 4 questions in 100. Retrieval is worth doing.
+
+**The ceiling is generous to `full-context` in a way no deployed system is.**
+An oracle reader never loses the answer inside 103,174 tokens; real readers do,
+which is the entire finding of the lost-in-the-middle literature. 94.0% is an
+upper bound that an LLM reading the full haystack would not reach, and the gap
+between it and Weave's 62.0% is correspondingly narrower in practice than the
+table implies. Measuring that honestly needs an API key and a second run over
+both arms; it has not been done, and the number is not claimed.
+
 #### The bug this table originally reported
 
 The first version of this table said `lexical-topk` **81.9%** against Weave
