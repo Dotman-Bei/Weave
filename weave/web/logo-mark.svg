@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32"
+     role="img" aria-labelledby="t d">
+  <title id="t">Weave</title>
+  <desc id="d">Two threads form the letter W; the violet warp passes behind the void weft at their single crossing. Interlaced, not stacked - nothing is overwritten.</desc>
+  <g fill="none" stroke-width="4.8" stroke-linecap="round" stroke-linejoin="round">
+    <path stroke="#7c6cf5" d="M5 8L13 24L14.39 21.22M17.61 14.78L21 8"/>
+    <path stroke="#1c1726" d="M11 8L19 24L27 8"/>
+  </g>
+</svg>

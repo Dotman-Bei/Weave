@@ -331,7 +331,29 @@ section[id], main[id] { scroll-margin-top: 100px; }
   font-weight: 700;
   font-size: 16px;
   letter-spacing: -0.01em;
+
+  /* Lockup: mark and wordmark on one optical baseline. The mark is set in ems
+     so it tracks the wordmark if the nav type ever changes size. */
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
+
+/* The mark. Strokes are tokenised rather than hard-coded so the logo cannot
+   drift out of the palette: warp is the signal violet, weft the void. The
+   break in the warp is the interlace -- it passes *behind* the weft, and is
+   the one detail that must survive every resize. */
+.brand-mark {
+  width: 1.25em;
+  height: 1.25em;
+  flex: none;
+  fill: none;
+  stroke-width: 4.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.brand-mark .warp { stroke: var(--color-signal); }
+.brand-mark .weft { stroke: var(--color-void); }
 
 .nav-links { display: flex; align-items: center; gap: 20px; }
 

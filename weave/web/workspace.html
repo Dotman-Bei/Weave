@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Weave workspace — query pipeline</title>
+<title>Weave</title>
 <meta name="description" content="Graph-native agent memory: an immutable episodic record, semantic facts that supersede rather than overwrite, and a procedural layer that learns how to retrieve them." />
 <link rel="stylesheet" href="/static/globals.css" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23f3effa'/%3E%3Cpath d='M6 11h20M6 21h20' stroke='%231c1726' stroke-width='2.5' stroke-linecap='round'/%3E%3Cpath d='M12 5v22M20 5v22' stroke='%237c6cf5' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='9'%20fill='%23f3effa'/%3E%3Cg%20fill='none'%20stroke-width='4.8'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20stroke='%237c6cf5'%20d='M5%208L13%2024L14.39%2021.22M17.61%2014.78L21%208'/%3E%3Cpath%20stroke='%231c1726'%20d='M11%208L19%2024L27%208'/%3E%3C/g%3E%3C/svg%3E" />
 </head>
 <body>
 
@@ -24,7 +24,13 @@
 <!-- ============================== NAV ============================== -->
 <div class="nav-wrap">
   <nav class="nav" aria-label="Primary">
-    <a class="nav-brand" href="/" aria-label="Weave home">WEAVE</a>
+    <a class="nav-brand" href="/" aria-label="Weave home">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <path class="warp" d="M5 8L13 24L14.39 21.22M17.61 14.78L21 8"/>
+        <path class="weft" d="M11 8L19 24L27 8"/>
+      </svg>
+      <span>WEAVE</span>
+    </a>
     <div class="nav-links">
       <a class="nav-link" href="/">&larr; Overview</a>
       <a class="nav-link" href="#workspace">Pipeline</a>
