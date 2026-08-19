@@ -744,7 +744,7 @@ INFO weave.retrieval:     abstained on 'What is my blood type?' (type=factual pa
 ## Tests
 
 ```bash
-pytest                      # 98 tests
+pytest                      # 101 tests: 99 passed, 1 skipped, 1 xfailed
 ```
 
 Covering the graph substrate (filters, ordering, bounded traversal, transaction
@@ -856,7 +856,7 @@ Neither dataset is redistributed here; both are fetched at runtime into
 | [model2vec](https://github.com/MinishLab/model2vec) + [`minishlab/potion-base-8M`](https://huggingface.co/minishlab/potion-base-8M) | Static embeddings for the semantic-similarity fallback — numpy only, no torch | MIT |
 | [anthropic](https://github.com/anthropics/anthropic-sdk-python) + [tiktoken](https://github.com/openai/tiktoken) | Optional LLM extraction/generation and token counting | MIT |
 | [python-dotenv](https://github.com/theskumar/python-dotenv) | `.env` loading | BSD-3 |
-| [pytest](https://github.com/pytest-dev/pytest) | The 98-test suite | MIT |
+| [pytest](https://github.com/pytest-dev/pytest) | The 101-test suite | MIT |
 | SQLite (via Python's [`sqlite3`](https://docs.python.org/3/library/sqlite3.html)) | Storage engine under the embedded graph backend, incl. the FTS5 text index | Public domain |
 
 **Event**
