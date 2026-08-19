@@ -168,6 +168,14 @@ class Settings:
     auto_consolidate: bool = field(
         default_factory=lambda: _env_bool("WEAVE_AUTO_CONSOLIDATE", True)
     )
+    # Load the bundled demo corpus into a graph that holds no sessions yet.
+    # Off by default -- a local server should start empty. Serverless
+    # deployments keep the database on an ephemeral per-instance disk, so
+    # without this every cold start greets a visitor with an empty graph and
+    # abstains on every question.
+    autoseed: bool = field(
+        default_factory=lambda: _env_bool("WEAVE_AUTOSEED", False)
+    )
 
     # --- procedural learning ---------------------------------------------
     # Epsilon-greedy exploration rate over retrieval paths.

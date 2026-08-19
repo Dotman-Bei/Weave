@@ -25,6 +25,9 @@ os.environ.setdefault("WEAVE_BACKEND", "embedded")
 os.environ.setdefault("WEAVE_DB_PATH", "/tmp/weave.db")
 os.environ.setdefault("WEAVE_EMBEDDINGS", "off")
 os.environ.setdefault("HF_HOME", "/tmp/hf")
+# /tmp is per-instance and ephemeral, so a cold start would otherwise serve an
+# empty graph and abstain on every question.
+os.environ.setdefault("WEAVE_AUTOSEED", "1")
 
 from weave.api import app  # noqa: E402  (imported after the environment is set)
 

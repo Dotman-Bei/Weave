@@ -8,6 +8,7 @@ fact timeline and what the procedural layer has learned.
 from __future__ import annotations
 
 import json
+import logging
 import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -33,6 +34,8 @@ from .util import human_date
 ROOT = Path(__file__).resolve().parent
 WEB_DIR = ROOT / "web"
 DATA_DIR = ROOT.parent / "data" / "sample_sessions"
+
+log = logging.getLogger("weave.api")
 
 
 # ---------------------------------------------------------------------------
@@ -492,9 +495,8 @@ def _node_title(label: str, props: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
-@app.post("/demo/seed")
-def seed_demo() -> dict[str, Any]:
-    """Load the bundled sample sessions and consolidate them."""
+def _load_sample_sessions() -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Ingest the bundled sample sessions and consolidate. Returns the report."""
     ingestion, consolidation, _ = _services()
     files = sorted(DATA_DIR.glob("*.json"))
     if not files:
@@ -508,7 +510,48 @@ def seed_demo() -> dict[str, Any]:
             ingested.append(result.to_dict())
 
     consolidated = consolidation.run_sleep_cycle()
-    return {"ingested": ingested, "consolidation": consolidated.to_dict()}
+    return ingested, consolidated.to_dict()
+
+
+@app.post("/demo/seed")
+def seed_demo() -> dict[str, Any]:
+    """Load the bundled sample sessions and consolidate them."""
+    ingested, consolidated = _load_sample_sessions()
+    return {"ingested": ingested, "consolidation": consolidated}
+
+
+_autoseed_done = False
+
+
+@app.middleware("http")
+async def autoseed_empty_graph(request: Request, call_next):
+    """Seed the demo corpus into a graph that has never held one.
+
+    Serverless deployments keep the embedded database on an ephemeral,
+    per-instance disk, so every cold start begins with an empty graph and a
+    visitor's first query abstains against nothing -- which reads as a broken
+    demo rather than as correct behaviour on an empty memory.
+
+    Off unless ``WEAVE_AUTOSEED`` is set, so local runs and the test suite keep
+    their empty start. Guarded on a *Session* count rather than the process
+    flag alone: the procedural layer bootstraps four QueryType and four
+    RetrievalPath nodes at startup, so "no nodes" is never true, and a reset
+    should be able to re-seed rather than being stuck empty until the instance
+    recycles.
+    """
+    global _autoseed_done
+    if get_settings().autoseed and not _autoseed_done:
+        _autoseed_done = True  # attempt once per process, even if it fails
+        try:
+            store = get_store()
+            with store.transaction() as tx:
+                empty = tx.count(S.SESSION) == 0
+            if empty:
+                _load_sample_sessions()
+                log.info("autoseed: demo corpus loaded into an empty graph")
+        except Exception:  # pragma: no cover - never fail a request over this
+            log.exception("autoseed failed; continuing with an empty graph")
+    return await call_next(request)
 
 
 @app.post("/reset")
