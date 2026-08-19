@@ -11,10 +11,17 @@
 
 > **Re-verification pass — 2026-08-19.** The original audit ran 2026-08-18, before
 > the README rewrite. Every row it marked ❌ was re-checked against the current
-> tree. **Cleared:** A10, C4, C5, C7, D1.1, D3.4, F7 — plus E5.5 (2 → 5), E3.5
-> (3 → 5) and the test count (86 → 101). **Still open:** C1 (default backend is
-> embedded SQLite — a product fact, not a writing gap), F6/E4.5 (synthetic-only
-> ablation) and **D2 (no demo video) — the one remaining hard blocker.**
+> tree. **Cleared:** A10, C4, C5, C7, D1.1, D3.4, F6, F7 — plus E3.5 (3 → 5),
+> E4.5 (2 → 4), E4.6 (4 → 5), E5.5 (2 → 5) and the test count (86 → 101).
+> E1–E5 average 3.72 → **4.02**; Section F 6/10 → **8/10**.
+>
+> **Still open — two items, one of them work:**
+> * **D2 — no demo video.** The only remaining hard blocker that effort can fix.
+> * **C1 — unpassable as written.** HydraDB ships as a managed REST context API
+>   with no graph interface, so it cannot be the "primary data store" for a graph
+>   workload. Mitigated on 08-19 by surfacing the sidecar in the UI so HydraDB
+>   visibly does work; the score is deliberately **not** raised for it.
+>
 > Rows carrying a "re-verified 2026-08-19" note were confirmed by execution, not
 > by reading.
 
@@ -73,7 +80,7 @@ Track 3 asks for an agent memory layer that handles:
 
 | # | HydraDB Requirement | How to Verify | Status |
 |---|---------------------|-------------|--------|
-| C1 | **HydraDB is the primary data store** | Search codebase for `neo4j` or `hydra` imports. HydraDB client instantiated in ≥3 service files. No fallback to SQLite/Postgres for core memory. | ❌ **FAIL** — default backend is `embedded` (SQLite). Services speak only the `GraphStore` contract, never HydraDB directly. The `hydra` backend is verified against **Neo4j 5.26**, and real HydraDB is an *optional, off-by-default* sidecar. |
+| C1 | **HydraDB is the primary data store** | Search codebase for `neo4j` or `hydra` imports. HydraDB client instantiated in ≥3 service files. No fallback to SQLite/Postgres for core memory. | ❌ **FAIL — and unpassable as literally written** (re-examined 2026-08-19). Default backend is `embedded` (SQLite); services speak only the `GraphStore` contract. The blocker is not effort: **HydraDB ships as a managed REST context API, not a graph server**, so there is no graph interface for it to be "primary" over and no `MATCH`/`SUPERSEDES` traversal to hand it. Passing this row would require claiming a capability the product does not expose. What was done instead: a real Bolt/OpenCypher backend (verified on Neo4j 5.26), real HydraDB integrated as a live-verified episodic index, and — new on 08-19 — **the sidecar surfaced in the workspace UI** (`HYDRADB ACTIVE`/`OFF` badge, state and reason from `/health`), so the integration is visible in the demo instead of buried in a JSON endpoint. |
 | C2 | **Graph-native queries, not just key-value** | Cypher queries use `MATCH`, `OPTIONAL MATCH`, variable-length paths, or `algo.*` procedures. No `SELECT * FROM memory_table` patterns. | ✅ **PASS** — 17 `MATCH` forms, variable-length `[r*1..n]`, `UNWIND` in stats; zero SQL in `weave/services/`. |
 | C3 | **Uses HydraDB-specific features** | At least ONE of: `algo.SSpaths`, `algo.MSpaths`, property indexes, temporal edge filtering, `UNWIND` batch writes. Not generic CRUD. | ⚠️ **PARTIAL** — property indexes ✅ (16 defined), `UNWIND` ✅, temporal edge filtering ✅. `algo.MSpaths` is implemented but is dead code on every server tested. |
 | C4 | **HydraDB does work a vector DB cannot** | Document in README: which queries require graph traversal (conflict resolution, temporal hops, multi-session synthesis) and why vectors fail. | ✅ **PASS** (re-verified 2026-08-19) — README **"Why a graph, and not a vector store"** names four queries (supersession walk, cross-session slot collection, conflict status, abstention coverage), states the traversal each needs and why nearest-neighbour fails on it, and closes with the shared shape: vectors rank by resemblance, all four answers depend on structure resemblance cannot see. Also states where embeddings *are* used (candidate generation, not retrieval substrate). |
@@ -81,7 +88,7 @@ Track 3 asks for an agent memory layer that handles:
 | C6 | **Repo commit history shows HydraDB integration** | `git log --grep="hydra\|cypher\|graph"` returns commits. Integration happened during build, not bolted on at the end. | ⚠️ **WEAK** — only 7 commits total; `--grep=hydra` returns 1 (the squashed initial commit). History does not evidence incremental integration. |
 | C7 | **Can explain what is lost without HydraDB** | In submission form or README: one paragraph on why the three-layer architecture collapses without graph-native traversal. | ✅ **PASS** (re-verified 2026-08-19) — README **"What breaks without the graph"** reproduces `"Where did I live before?"` on Postgres + a vector index as a 5-step counterfactual: vector search, 4 JOINs to hydrate provenance, a hand-written recursive CTE over the supersession chain, another JOIN for conflict status, then reconciliation code because the two stores share no identity. States the honest counter-argument too (SQLite would be fast enough; the claim is one traversal vs a bespoke join plan). |
 
-**Section C Result:** ❌ **FAIL** — **C1 only** (re-verified 2026-08-19). C4, C5 and C7 are cleared by the README rewrite. C1 remains a product-reality problem, not a writing problem (see findings); C3 stays partial.
+**Section C Result:** ❌ **FAIL** — **C1 only** (re-verified 2026-08-19). C4, C5 and C7 are cleared by the README rewrite. C1 cannot be cleared honestly: HydraDB exposes no graph interface to be primary over (see the row and the finding below). The sidecar is now visible in the UI, which is the most this row allows without a false claim. C3 stays partial.
 
 ---
 
@@ -148,7 +155,7 @@ Rate your project **1–5** on each criterion. Be honest. A 3 is "average for th
 
 | # | Checkpoint | Score | Evidence |
 |---|------------|-------|----------|
-| E2.1 | HydraDB is the primary data store, not a side cache | **2** | **The core miss.** SQLite embedded is the default and the benchmarked path. HydraDB is optional and off by default. |
+| E2.1 | HydraDB is the primary data store, not a side cache | **2** | **Score stands at 2 — the core miss is structural, not cosmetic.** SQLite embedded is still the default and the benchmarked path; HydraDB is still an optional index. The 08-19 UI work makes the integration *visible* (nav badge driven by `/health`, tooltip naming the exact state and reason) and gives the demo something to point at, but visibility is not primacy and the score does not move for it. See C1 for why primacy is not available at all. |
 | E2.2 | Uses graph traversal for queries vectors cannot answer (conflict chains, temporal hops) | **4** | Conflict chains, supersession history and multi-session synthesis genuinely need traversal — and are used. |
 | E2.3 | Uses HydraDB-specific features (`algo.SSpaths`, `algo.MSpaths`, property indexes) | **2** | `algo.MSpaths` implemented but never executes; property indexes are real but generic. |
 | E2.4 | Graph schema is well-designed (labels, relationships, indexes are intentional) | **5** | 16 intentional indexes, 3 node families, 15 relationship types, bi-temporal `valid_from`/`valid_until`. |
@@ -176,10 +183,10 @@ Rate your project **1–5** on each criterion. Be honest. A 3 is "average for th
 | E4.2 | Accuracy is measured against a baseline (full-context or naive retrieval) | **2** | Full-context token count is reported; **full-context accuracy is never measured**, so there is no baseline to beat. |
 | E4.3 | Abstention accuracy is explicitly measured | **5** | Precision/recall/F1 reported on every run, with a signals dump in `results/abstention-signals.json`. |
 | E4.4 | Token efficiency is quantified (tokens/query vs. 115K full context) | **5** | 198× on LongMemEval, 43.6× on LoCoMo. Quantified per question. |
-| E4.5 | Ablations prove each layer's contribution (episodic-only vs. semantic-only vs. full) | **2** | Ablation harness works, but the published table is **synthetic-only**, where three of four configs score 100% — it proves nothing. |
-| E4.6 | Results are reproducible (benchmark script runs deterministically) | **4** | Scripts are deterministic and stratified sampling is seeded; `results/` is gitignored so nothing is checked in. |
+| E4.5 | Ablations prove each layer's contribution (episodic-only vs. semantic-only vs. full) | **4** | Re-scored 08-19. The published table is now real LongMemEval (n=60), and it proves the episodic and semantic layers: `semantic-only` collapses to 10.0% with **0% context recall** (facts are an index, not evidence), `episodic-only` reaches 26.7%, `full-weave` 28.3%. Held at 4, not 5: `full-weave` **ties** `no-consolidation` on accuracy (17/60 each), so consolidation's contribution shows only in context recall (64.3% → 69.6%) and abstention F1 (22.2% → 25.0%) — and a one-question gap at n=60 is not significant. The README states this limitation itself rather than claiming the win. |
+| E4.6 | Results are reproducible (benchmark script runs deterministically) | **5** | Re-scored 08-19. Scripts are deterministic and stratified sampling is seeded, and `.gitignore` now excludes only `results/*.log` — every JSON report the README cites is tracked and independently checkable. |
 
-**E4 Average Score:** **3.83** / 5
+**E4 Average Score:** **4.33** / 5 *(was 3.83; E4.5 re-scored 2 → 4 and E4.6 4 → 5 on 2026-08-19. E4.2 stays at 2 — no full-context accuracy baseline has been measured.)*
 
 ### E5: Originality (Weight: High)
 
@@ -217,13 +224,13 @@ These are the things that separate a "good submission" from a "track winner." Mo
 | F3 | **Overwritten info is queryable** | A user can ask "what did I believe before X?" and get a historical answer. This is impossible in Mem0/Zep. | ✅ **PASS** — verified live. Superseded facts keep node, evidence and `valid_until`. |
 | F4 | **Cross-session synthesis is demonstrated** | The demo shows a question whose answer ONLY exists by combining Session 3 and Session 12. Not just retrieval from one session. | ✅ **PASS (implemented)** — multi-citation synthesis works; needs to be *shown* in the demo. |
 | F5 | **Token savings are quantified** | A chart or table showing tokens/query vs. full 115K context. "We save 95% of tokens" is a powerful demo moment. | ✅ **PASS** — 198× table in README, measured per question on real data. |
-| F6 | **Benchmark scores beat a naive baseline** | The ablation study shows episodic-only and semantic-only are worse than the full three-layer system. | ❌ **FAIL** — the ablation table is synthetic-only, where `semantic-only`, `full-weave` and conflict resolution all sit at 100%. **No real-data ablation exists.** |
+| F6 | **Benchmark scores beat a naive baseline** | The ablation study shows episodic-only and semantic-only are worse than the full three-layer system. | ✅ **PASS** (re-verified 2026-08-19) — the README **Ablation** table is now real-data: 60 stratified questions from `local:longmemeval-s.json`, four configs, one variable each. Both named baselines lose to the full system: `semantic-only` **10.0%** and `episodic-only` **26.7%** against `full-weave` **28.3%**, which also leads on context recall (69.6%) and abstention F1 (25.0%). Every figure reconciles against `results/abl-episodic.json` + `results/abl-rest.json`. |
 | F7 | **HydraDB is irreplaceable** | The README has a paragraph: "Without HydraDB, we would need X JOINs in Postgres + Y vector searches + Z custom logic. HydraDB does this in one Cypher query." | ✅ **PASS** (re-verified 2026-08-19) — "What breaks without the graph" is exactly this paragraph, with the counts filled in: one vector search + 5-plus JOINs + a recursive CTE + reconciliation code across two stores that share no identity, against one bounded traversal in Weave. |
 | F8 | **Demo has a "wow" moment** | The video contains one query that makes the viewer think "I've never seen an AI memory system do that." (e.g., correct abstention, historical preference lookup, conflict explanation) | ⚠️ **BLOCKED** — no video. The material exists (abstention, historical lookup, 198×); it has not been captured. |
 | F9 | **Code quality signals professionalism** | Type hints, docstrings, error handling, logging, tests. Judges are engineers — they notice sloppiness. | ✅ **PASS** — 101 tests (99 passed, 1 skipped, 1 xfailed; re-run 2026-08-19), full type hints, docstrings, `from __future__ import annotations` throughout, no TODOs. |
 | F10 | **Submission form is persuasive** | The "What you built" and "How HydraDB is used" fields are specific and technical, not generic marketing copy. | ⚠️ **PARTIAL** — the Section I draft is specific and technical, but overstates `algo.SSpaths` as running in production. |
 
-**Section F Score:** **7 / 10 passed** (F1–F5, F7, F9) — re-verified 2026-08-19, up from 6/10 on F7. This crosses the 7/10 win-track threshold. F6 needs the real-data ablation; F8 needs the video; F10 needs one correction.
+**Section F Score:** **8 / 10 passed** (F1–F7, F9) — re-verified 2026-08-19, up from 6/10 on F6 and F7. Past the 7/10 win-track threshold, one short of the 9/10 champion bar. **F8 needs the video** (the only one that is still work); F10 needs a one-line correction to the Section I draft.
 
 ---
 
@@ -235,7 +242,7 @@ These are the things that separate a "good submission" from a "track winner." Mo
 |---------|--------|----------------|
 | A: Rules Compliance | ✅ **PASS** | — *(A10 cleared 08-19; A2/A6–A9 manual)* |
 | B: Track 3 Core Fit | ✅ **PASS** | — |
-| C: HydraDB Usage | ❌ **FAIL** | **C1 only** *(C4, C5, C7 cleared 08-19)* |
+| C: HydraDB Usage | ❌ **FAIL** | **C1 only — unpassable as written** *(C4, C5, C7 cleared 08-19)* |
 | D: Submission Artifacts | ❌ **FAIL** | **all of D2 — no video** *(D1.1 cleared 08-19)* |
 
 **If any section above is FAIL → DO NOT SUBMIT. Fix first.**
@@ -247,20 +254,20 @@ These are the things that separate a "good submission" from a "track winner." Mo
 | E1 Technical Execution | **4.57** | 3.0 | 4.0 | 4.5 | ✅ champion tier |
 | E2 HydraDB Usage | **2.80** | 3.5 | 4.5 | 5.0 | ❌ **below finalist** |
 | E3 Product Completeness | **3.80** | 3.0 | 3.5 | 4.0 | ✅ win-track tier *(E3.3 video = 1 caps it)* |
-| E4 Quality of Results | **3.83** | 3.0 | 4.0 | 4.5 | ⚠️ finalist, short of win |
+| E4 Quality of Results | **4.33** | 3.0 | 4.0 | 4.5 | ✅ win-track tier |
 | E5 Originality | **4.60** | 3.5 | 4.5 | 5.0 | ✅ win-track tier |
 | E6 Best Use of HydraDB | **4.75** | 3.0 | 4.0 | 4.5 | ✅ champion tier |
-| F Differentiators | **7/10** | 5/10 | 7/10 | 9/10 | ✅ win-track tier |
+| F Differentiators | **8/10** | 5/10 | 7/10 | 9/10 | ✅ win-track tier *(F8 video = the 9th)* |
 
-**E1–E5 average: 3.92** *(was 3.72; on 2026-08-19 E5 re-scored 4.00 → 4.60 and E3 3.40 → 3.80).*
+**E1–E5 average: 4.02** *(was 3.72; on 2026-08-19 E3 3.40 → 3.80, E4 3.83 → 4.33, E5 4.00 → 4.60).*
 
 ### Final Decision
 
 | Question | Answer |
 |----------|--------|
-| All hard blockers pass? | ❌ **NO** — **C1 and D2** remain. A10, C4, C5, C7 and D1.1 cleared 2026-08-19. |
-| Average score across E1–E5 ≥ 3.5? | ✅ **YES** — 3.92 |
-| At least 7/10 differentiators (Section F) present? | ✅ **YES** — 7/10 (F7 cleared 2026-08-19) |
+| All hard blockers pass? | ❌ **NO** — **C1 and D2** remain. C1 is unpassable as written (HydraDB exposes no graph interface); **D2 is the only one that is still work.** A10, C4, C5, C7, D1.1 cleared 2026-08-19. |
+| Average score across E1–E5 ≥ 3.5? | ✅ **YES** — 4.02 |
+| At least 7/10 differentiators (Section F) present? | ✅ **YES** — 8/10 (F6 + F7 cleared 2026-08-19) |
 | Demo video is compelling and under 3 minutes? | ❌ **NO** — no video exists |
 | You would be impressed if YOU were the judge? | ⚠️ **By the engineering, yes. The graph-vs-vector story is now told well; what is left is that the default path is still SQLite (C1) and there is nothing to watch (D2).** |
 
@@ -270,11 +277,13 @@ These are the things that separate a "good submission" from a "track winner." Mo
 
 **The engineering was always finalist-to-champion grade (E1 4.57, E6 4.75); the submission around it was not.** The 08-18 verdict was that Weave lost points not for what it does but for what it failed to *say* and *show*. The **say** half is now done — the README carries Attribution, "Why a graph, and not a vector store", "What breaks without the graph" and "Why object-store backing matters here", which between them cleared A10, C4, C5, C7, D1.1 and F7, re-scored E5.5 (2 → 5) and E3.5 (3 → 5), and moved E3 to 3.80, E5 to 4.60, the E1–E5 average to 3.92 and Section F to 7/10. A live deployment was also verified, clearing D3.4.
 
-What remains is the **show** half plus one structural item:
+The real-data ablation was published as well, clearing F6 and moving E4.5 (2 → 4) and E4.6 (4 → 5). Section F now stands at **8/10** and the E1–E5 average at **4.02** — win-track on E3, E4, E5 and F, champion tier on E1 and E6.
 
-* **D2 — no demo video.** The only true hard blocker still open, and the highest-value remaining hour of work. Shot list in Section J, pre-flight in Section K.
-* **C1/E2.1 — the default path is still embedded SQLite.** Unchanged and not a writing problem (see below).
-* **F6/E4.5 — the ablation is still synthetic-only**, three configs tied at 100%.
+What remains:
+
+* **D2 — no demo video.** The only true hard blocker still open, and the highest-value remaining hour of work. Shot list in Section J, pre-flight in Section K. It is also the 9th differentiator (F8) and the cap on E3.3 — one recording moves three rows.
+* **C1/E2.1 — the default path is still embedded SQLite, and always will be.** Not a writing problem and not a effort problem: HydraDB has no graph interface to be primary over. The 08-19 UI work makes the integration visible rather than pretending it is something else; the score stays at 2 (see below).
+* **E4.2 — no full-context accuracy baseline.** The token *ratio* is measured (198×); the accuracy of stuffing the full haystack is not, so there is still no head-to-head number. The remaining P1.
 
 **The one real structural finding (C1/E2.1).** HydraDB, as it actually ships, is a managed REST context API — not the Bolt/OpenCypher server with `algo.SSpaths` that the specification described. The project handled this correctly and honestly: it built a real Bolt backend (verified on Neo4j 5.26), integrated the real HydraDB as a live-verified retrieval sidecar, and documented the discrepancy in the README. But the *default and benchmarked* path is embedded SQLite, so against a literal reading of "HydraDB is the primary data store," this fails. The fix is not to overclaim — it is to make the honest position **prominent and framed as a finding**, and to make the sidecar carry visible weight in the demo.
 
@@ -292,12 +301,12 @@ Rows struck through were verified complete on the 08-19 re-run.
 | ~~**P0**~~ | ~~Add **"Why HydraDB, and what breaks without it"**~~ — ✅ **DONE 08-19.** Shipped as two sections: "Why a graph, and not a vector store" (4-query table) and "What breaks without the graph" (5-step Postgres counterfactual) | C4 ✅, C7 ✅, E5.5 ✅, F7 ✅ | — |
 | ~~**P0**~~ | ~~Add **object-store economics** paragraph~~ — ✅ **DONE 08-19** as "Why object-store backing matters here" (198:1 ratio, hot/cold layer table). Clears C5; **E2.5 stays at 1** — it asks for *leveraged*, and the README correctly says "not yet exercised" | C5 ✅, E2.5 ⬜ | — |
 | ~~**P0**~~ | ~~Add **Team** section to README~~ — ✅ **DONE 08-19.** Solo build + contribution breakdown | D1.1 ✅, D3.1 ⬜ *(form still manual)* | — |
-| **P1** | **Run the ablation on real LongMemEval** and publish that table alongside the synthetic one | E4.5, F6 | 45 min |
+| ~~**P1**~~ | ~~Run the ablation on real LongMemEval and publish it~~ — ✅ **DONE.** Published as the README **Ablation** table (n=60, `local:longmemeval-s.json`), with the synthetic conflict-resolution column explicitly retired as unscoreable on real data | E4.5 ✅ *(2 → 4)*, F6 ✅ | — |
 | **P1** | **Measure a full-context baseline** — accuracy of stuffing the haystack vs Weave's 520 tokens | E4.2 | 45 min |
 | **P1** | Correct the Section I form draft: `algo.MSpaths` is implemented with a verified fallback, **not** running in production | D3.5, F10 | 10 min |
 | **P2** | Refresh stale README numbers — test count corrected to **101** on 08-19 (99 passed, 1 skipped, 1 xfailed); still to do: regenerate the results table from the newest `results/*.json` and re-check the `Where did I live before?` sample output | E3.5 | 15 min |
 | ~~**P2**~~ | ~~Commit `results/*.json`~~ — ✅ **DONE.** `.gitignore` now ignores only `results/*.log`; the JSON reports are tracked and the README's figures reconcile against `longmemeval-s-final.json` | E4.6 ✅ | — |
-| **P2** | Promote the HydraDB sidecar in the demo path so HydraDB visibly does work | C1, E2.1 | 30 min |
+| ~~**P2**~~ | ~~Promote the HydraDB sidecar in the demo path~~ — ✅ **DONE 08-19.** `HYDRADB ACTIVE`/`OFF` badge in the workspace nav + sidecar state in the landing footer, both fed by `/health`; verified in both states, no layout overflow at 1440/1024/768/390px, no console errors. **Export `HYDRA_DB_API_KEY` before recording** or the badge honestly reads `OFF` | C1 ⬜ *(unpassable)*, E2.1 ⬜ *(score unchanged)* | — |
 | **P3** | Add `logging` to `weave/services/` (currently only 4 modules log) | E1.7 | 30 min |
 | **P3** | Add a README section for the LoCoMo 300-question run (measured, unpublished) | E4.1 | 15 min |
 
@@ -439,9 +448,16 @@ This is the one that has actually broken before, so do it first and do it in a
 | 0.1 | Open the URL in incognito | Landing page renders, no login, no `unauthorized` | If `{"detail":"unauthorized"}` → `WEAVE_ACCESS_TOKEN` is still set in Vercel. Delete it and redeploy. |
 | 0.2 | Click **Workspace** in the nav | Workspace loads | 404 → a `vercel.json` with a `rewrites` rule has come back. There must not be one. |
 | 0.3 | Read the header line | **`8 sessions · 118 nodes · 12 current · 2 superseded`** | `0 sessions` → autoseed did not run. Check `WEAVE_AUTOSEED` is set and `data/sample_sessions/` is not excluded by `.vercelignore`. |
+| 0.4 | Read the third nav badge | **`HYDRADB ACTIVE`** (purple) | Reads `HYDRADB OFF` (grey) → no `HYDRA_DB_API_KEY` in the environment. Set one (free tier, `https://app.hydradb.com`) and redeploy, or accept the honest `OFF` and do not point the camera at it. Hover for the exact reason. |
 
 **Do not skip 0.3.** A cold instance with an empty graph abstains on every
 question, which looks exactly like a broken demo on camera.
+
+**0.4 is the HydraDB shot.** The badge is the only place the sidecar is visible
+on screen — C1 is unpassable on the merits, so a judge seeing `HYDRADB ACTIVE`
+next to `BACKEND EMBEDDED` is the difference between "they used the sponsor
+database" and "they mentioned it in the README." Set the key *before* recording;
+the badge reads from `/health` on page load, not on a timer.
 
 ### 1 — Cross-session synthesis
 

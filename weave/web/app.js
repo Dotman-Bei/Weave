@@ -237,13 +237,31 @@
         extractionBadge.className = `tag ${health.llm_configured ? "tag-signal" : "tag-quiet"}`;
       }
 
+      // HydraDB is a real integration that is easy to miss: it indexes the
+      // episodic layer while the graph stays the source of truth, so nothing
+      // on screen changes when it is carrying traffic. Until now its only
+      // trace was /health, which means a demo viewer had no way to see it run
+      // at all. The state is reported rather than inferred -- "off" has three
+      // distinct causes (disabled, no key, SDK missing) and the tooltip says
+      // which, because a badge that hides the reason invites the guess that
+      // the integration does not exist.
+      const sidecar = health.hydra_sidecar || {};
+      const sidecarBadge = document.getElementById("badge-sidecar");
+      if (sidecarBadge) {
+        const active = sidecar.state === "active";
+        sidecarBadge.textContent = `HYDRADB ${String(sidecar.state || "unknown").toUpperCase()}`;
+        sidecarBadge.className = `tag ${active ? "tag-signal" : "tag-quiet"}`;
+        sidecarBadge.title = [sidecar.reason, sidecar.role].filter(Boolean).join(" — ");
+      }
+
       // The footer summary only exists on the landing page; the badges only
       // on the workspace. Neither page has both, so writes are optional.
       const footer = document.getElementById("footer-config");
       if (footer) {
         footer.textContent =
           `${backend} · ${config.llm} · abstention ≥ ${config.abstention_threshold} · ` +
-          `context ≤ ${num(config.max_context_tokens)}`;
+          `context ≤ ${num(config.max_context_tokens)} · ` +
+          `hydradb sidecar ${sidecar.state || "unknown"}`;
       }
     } catch (_) {
       const badge = document.getElementById("badge-backend");
